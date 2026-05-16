@@ -1,0 +1,16 @@
+#!/bin/sh
+set -e
+workspace_root="$(git rev-parse --show-toplevel)"
+harness_root="$CODEX_HARNESS_ROOT"
+if [ -z "$harness_root" ]; then
+  harness_root="$workspace_root"
+fi
+if command -v cygpath >/dev/null 2>&1; then
+  workspace_root="$(cygpath -w "$workspace_root")"
+  harness_root="$(cygpath -w "$harness_root")"
+fi
+
+tmp="${TMP:-/tmp}/codex_pre_push_$$.txt"
+cat > "$tmp"
+trap 'rm -f "$tmp"' EXIT
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$harness_root\\harness\\scripts\\assert_git_action_allowed.ps1" -Action push -RemoteName "$1" -RemoteUrl "$2" -RefUpdateFile "$tmp" -RepositoryRoot "$workspace_root"

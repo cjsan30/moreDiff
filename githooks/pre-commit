@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+workspace_root="$(git rev-parse --show-toplevel)"
+harness_root="$CODEX_HARNESS_ROOT"
+if [ -z "$harness_root" ]; then
+  harness_root="$workspace_root"
+fi
+if command -v cygpath >/dev/null 2>&1; then
+  workspace_root="$(cygpath -w "$workspace_root")"
+  harness_root="$(cygpath -w "$harness_root")"
+fi
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$harness_root\\harness\\scripts\\assert_git_action_allowed.ps1" -Action commit -RepositoryRoot "$workspace_root"

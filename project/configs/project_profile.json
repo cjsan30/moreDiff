@@ -1,0 +1,248 @@
+{
+  "project": {
+    "name": "morediff",
+    "summary": "Web service for comparing one GitHub base branch against 2 to 6 compare branches in one workspace with branch-local editing and saveback.",
+    "language": "TypeScript",
+    "runtime": "Node.js web application",
+    "framework": "Next.js",
+    "ide": "VS Code",
+    "repository_root": "."
+  },
+  "requirements": {
+    "source_docs": [
+      "AGENT.md",
+      "docs/requirements.md",
+      "docs/subagent_plan.md",
+      "docs/subagent_first_prompts.md",
+      "harness/AGENT.md"
+    ],
+    "success_criteria": [
+      "support one base branch plus two to six compare branches in a single session",
+      "support branch-local editing and safe saveback as part of the MVP",
+      "keep harness validation and assignment flow operational"
+    ]
+  },
+  "commands": {
+    "build": "npm run build",
+    "unit": "npm test",
+    "integration": "npm run test:integration",
+    "benchmark_smoke": "npm run test:smoke",
+    "release": "npm run build",
+    "full_cycle": "powershell -ExecutionPolicy Bypass -File harness/scripts/run_harness_cycle.ps1"
+  },
+  "owners": {
+    "agent-runtime": {
+      "read": [
+        "AGENT.md",
+        "docs/requirements.md",
+        "docs/subagent_plan.md",
+        "docs/subagent_first_prompts.md",
+        "harness/AGENT.md",
+        "app/AGENT.md"
+      ],
+      "work_area": "app",
+      "validation": "npm test -- app",
+      "failure_scope": [
+        "startup flow",
+        "routing",
+        "auth entrypoints",
+        "session bootstrap"
+      ]
+    },
+    "agent-domain": {
+      "read": [
+        "AGENT.md",
+        "docs/requirements.md",
+        "docs/subagent_plan.md",
+        "docs/subagent_first_prompts.md",
+        "harness/AGENT.md",
+        "src/domain/AGENT.md"
+      ],
+      "work_area": "src/domain",
+      "validation": "npm test -- compare-session",
+      "failure_scope": [
+        "session rules",
+        "branch constraints",
+        "overlap semantics",
+        "save semantics"
+      ]
+    },
+    "agent-data": {
+      "read": [
+        "AGENT.md",
+        "docs/requirements.md",
+        "docs/subagent_plan.md",
+        "docs/subagent_first_prompts.md",
+        "harness/AGENT.md",
+        "src/data/AGENT.md"
+      ],
+      "work_area": "src/data",
+      "validation": "npm test -- github",
+      "failure_scope": [
+        "GitHub integration",
+        "diff materialization",
+        "persistence",
+        "branch writeback"
+      ]
+    },
+    "agent-ui": {
+      "read": [
+        "AGENT.md",
+        "docs/requirements.md",
+        "docs/subagent_plan.md",
+        "docs/subagent_first_prompts.md",
+        "harness/AGENT.md",
+        "src/ui/AGENT.md"
+      ],
+      "work_area": "src/ui",
+      "validation": "npm test -- workspace",
+      "failure_scope": [
+        "workspace layout",
+        "diff rendering",
+        "editor state",
+        "save interactions"
+      ]
+    },
+    "agent-tests": {
+      "read": [
+        "AGENT.md",
+        "docs/requirements.md",
+        "docs/subagent_plan.md",
+        "docs/subagent_first_prompts.md",
+        "harness/AGENT.md",
+        "tests/AGENT.md"
+      ],
+      "work_area": "tests",
+      "validation": "npm test",
+      "failure_scope": [
+        "regression coverage",
+        "fixtures",
+        "integration tests",
+        "smoke checks"
+      ]
+    },
+    "manager-main": {
+      "read": [
+        "AGENT.md",
+        "docs/requirements.md",
+        "docs/subagent_plan.md",
+        "docs/subagent_first_prompts.md",
+        "harness/AGENT.md",
+        "harness/project/prompts/manager_main.md",
+        "harness/project/prompts/manager_main_seed.md",
+        "harness/configs/git_policy.md"
+      ],
+      "work_area": "project-wide",
+      "validation": "npm test",
+      "failure_scope": [
+        "cross-module",
+        "interface reconciliation",
+        "integration ownership"
+      ]
+    },
+    "manager-harness": {
+      "read": [
+        "AGENT.md",
+        "docs/requirements.md",
+        "docs/subagent_plan.md",
+        "docs/subagent_first_prompts.md",
+        "harness/AGENT.md",
+        "harness/project/prompts/manager_harness.md",
+        "harness/configs/git_policy.md",
+        "harness/configs/retry_dispatch_policy.md"
+      ],
+      "work_area": "harness",
+      "validation": "powershell -ExecutionPolicy Bypass -File harness/scripts/run_harness_cycle.ps1 -SkipRetryPrompt",
+      "failure_scope": [
+        "tooling",
+        "dispatch",
+        "automation"
+      ]
+    }
+  },
+  "dispatch": {
+    "compile_owner": "manager-main",
+    "interface_owner": "manager-main",
+    "environment_owner": "manager-harness",
+    "default_failure_type": "logic",
+    "repeat_failure_escalation_owner": "manager-main"
+  },
+  "failure_patterns": {
+    "environment": [
+      "command not found",
+      "not recognized",
+      "No such file",
+      "No such file or directory",
+      "cannot find the path specified",
+      "Cannot find module",
+      "ERR_MODULE_NOT_FOUND",
+      "ModuleNotFoundError",
+      "ImportError",
+      "package not found",
+      "No module named",
+      "Access is denied",
+      "Permission denied",
+      "UnauthorizedAccessException",
+      "EPERM",
+      "EACCES",
+      "ECONNREFUSED",
+      "ETIMEDOUT",
+      "ENOTFOUND",
+      "network timeout",
+      "Temporary failure in name resolution"
+    ],
+    "compile": [
+      "error:",
+      "fatal error",
+      "compilation failed",
+      "SyntaxError",
+      "TypeScript error",
+      "TS2307",
+      "TS2322",
+      "build failed",
+      "Failed to compile",
+      "Prisma schema validation"
+    ],
+    "interface": [
+      "mismatch",
+      "incompatible",
+      "conflict",
+      "expected",
+      "actual",
+      "AssertionError",
+      "TypeError",
+      "ReferenceError",
+      "undefined method",
+      "AttributeError",
+      "contract",
+      "schema validation"
+    ]
+  },
+  "git_workflow": {
+    "hooks_path": ".githooks",
+    "state_file": "harness/state/git_workflow/state.json",
+    "reports_dir": "harness/reports/git_workflow",
+    "bootstrap_branch": "main",
+    "main_branch": "main",
+    "dev_branch": "dev",
+    "feature_branch_prefix": "codex/",
+    "test_branch_prefix": "codex/test/"
+  },
+  "harness": {
+    "logs": "harness/reports/logs",
+    "latest_report": "harness/reports/latest_report.md",
+    "preflight_report": "harness/reports/preflight_report.md",
+    "test_results": "harness/reports/test_results",
+    "retry_prompts": "harness/reports/retry_prompts",
+    "seed_plans": "harness/reports/seed_plans",
+    "dispatch_packets": "harness/reports/dispatch_packets",
+    "agent_runs": "harness/reports/agent_runs",
+    "assignments_root": "harness/assignments",
+    "assignment_worktrees_root": "harness/state/worktrees",
+    "dispatch_log": "harness/reports/dispatch_log.md",
+    "seed_dispatch_log": "harness/reports/seed_dispatch_log.md",
+    "assignment_log": "harness/reports/assignment_log.md",
+    "live_dispatch_log": "harness/reports/live_dispatch_log.md",
+    "assignment_stale_seconds": 7200
+  }
+}
