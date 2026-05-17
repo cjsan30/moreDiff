@@ -75,6 +75,17 @@ export function LiveComparePage() {
     repoUrl: string;
     baseBranch: string;
     compareBranches: string[];
+    pullRequests?: Array<{
+      number: number;
+      title: string;
+      url: string;
+      baseBranch: string;
+      headBranch: string;
+      headSha: string;
+      isSameRepository: boolean;
+      updatedAt: string;
+      authorLogin: string;
+    }>;
   }) {
     setState({
       kind: "loading",

@@ -49,6 +49,32 @@ interface GitHubUpdateContentResponse {
   };
 }
 
+interface GitHubPullRequestResponse {
+  number: number;
+  title: string;
+  state: "open" | "closed";
+  html_url: string;
+  updated_at: string;
+  user?: {
+    login?: string;
+  } | null;
+  base: {
+    ref: string;
+    repo?: {
+      full_name?: string;
+    } | null;
+  };
+  head: {
+    ref: string;
+    sha: string;
+    repo?: {
+      full_name?: string;
+    } | null;
+  };
+}
+
+interface GitHubPullRequestCreateResponse extends GitHubPullRequestResponse {}
+
 export interface GitHubConnectionSummary {
   viewerLogin: string;
   repositories: GitHubAccessibleRepository[];
@@ -71,6 +97,19 @@ export interface GitHubAccessibleRepository {
   url: string;
   isPrivate: boolean;
   defaultBranch: string;
+}
+
+export interface GitHubPullRequestSummary {
+  number: number;
+  title: string;
+  state: "open" | "closed";
+  url: string;
+  baseBranch: string;
+  headBranch: string;
+  headSha: string;
+  isSameRepository: boolean;
+  updatedAt: string;
+  authorLogin: string;
 }
 
 interface GitHubRequestErrorOptions {
@@ -138,6 +177,74 @@ export class GitHubClient {
       name: branch.name,
       headSha: branch.commit.sha,
     }));
+  }
+
+  async listPullRequests(ref: GitHubRepositoryRef): Promise<GitHubPullRequestSummary[]> {
+    const pullRequests = await this.request<GitHubPullRequestResponse[]>(
+      `/repos/${ref.owner}/${ref.name}/pulls?state=open&per_page=100&sort=updated&direction=desc`,
+    );
+
+    return pullRequests.map((pullRequest) => mapPullRequestResponse(pullRequest));
+  }
+
+  async getPullRequest(
+    ref: GitHubRepositoryRef,
+    pullNumber: number,
+  ): Promise<GitHubPullRequestSummary> {
+    const pullRequest = await this.request<GitHubPullRequestResponse>(
+      `/repos/${ref.owner}/${ref.name}/pulls/${pullNumber}`,
+    );
+
+    return mapPullRequestResponse(pullRequest);
+  }
+
+  async createPullRequest(options: {
+    ref: GitHubRepositoryRef;
+    title: string;
+    body?: string;
+    baseBranch: string;
+    headBranch: string;
+    draft?: boolean;
+  }): Promise<GitHubPullRequestSummary> {
+    const pullRequest = await this.request<GitHubPullRequestCreateResponse>(
+      `/repos/${options.ref.owner}/${options.ref.name}/pulls`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          title: options.title,
+          body: options.body ?? "",
+          base: options.baseBranch,
+          head: options.headBranch,
+          draft: options.draft ?? false,
+        }),
+      },
+    );
+
+    return mapPullRequestResponse(pullRequest);
+  }
+
+  async updatePullRequest(options: {
+    ref: GitHubRepositoryRef;
+    pullNumber: number;
+    title?: string;
+    body?: string;
+    baseBranch?: string;
+    state?: "open" | "closed";
+  }): Promise<GitHubPullRequestSummary> {
+    const pullRequest = await this.request<GitHubPullRequestResponse>(
+      `/repos/${options.ref.owner}/${options.ref.name}/pulls/${options.pullNumber}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          title: options.title,
+          body: options.body,
+          base: options.baseBranch,
+          state: options.state,
+        }),
+      },
+    );
+
+    return mapPullRequestResponse(pullRequest);
   }
 
   async buildCompareBranch(
@@ -292,4 +399,27 @@ function extractGitHubErrorMessage(payload: unknown, fallback: string): string {
   }
 
   return fallback || "GitHub request failed";
+}
+
+function mapPullRequestResponse(
+  pullRequest: GitHubPullRequestResponse,
+): GitHubPullRequestSummary {
+  const baseRepoName = pullRequest.base.repo?.full_name ?? "";
+  const headRepoName = pullRequest.head.repo?.full_name ?? "";
+
+  return {
+    number: pullRequest.number,
+    title: pullRequest.title,
+    state: pullRequest.state,
+    url: pullRequest.html_url,
+    baseBranch: pullRequest.base.ref,
+    headBranch: pullRequest.head.ref,
+    headSha: pullRequest.head.sha,
+    isSameRepository:
+      baseRepoName.length > 0 &&
+      headRepoName.length > 0 &&
+      baseRepoName === headRepoName,
+    updatedAt: pullRequest.updated_at,
+    authorLogin: pullRequest.user?.login ?? "",
+  };
 }

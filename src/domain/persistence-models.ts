@@ -1,4 +1,4 @@
-import type { FileStatus } from "@/src/domain/types";
+import type { FileStatus, ImportedPullRequest, ReviewNote } from "@/src/domain/types";
 
 export interface UserRecord {
   id: string;
@@ -27,6 +27,7 @@ export interface CompareSessionRecord {
   repo_name: string;
   repo_url: string;
   base_branch: string;
+  status: "active" | "archived";
   created_at: string;
   updated_at: string;
 }
@@ -60,11 +61,42 @@ export interface WorkspaceEditRecord {
   saved_at: string;
 }
 
+export interface PullRequestImportRecord extends ImportedPullRequest {
+  id: string;
+  session_id: string;
+  imported_at: string;
+}
+
+export interface ReviewNoteRecord extends ReviewNote {
+  user_id: string;
+}
+
+export interface AuditEventRecord {
+  id: string;
+  user_id: string;
+  session_id: string;
+  event_type:
+    | "session.saved"
+    | "session.opened"
+    | "diff.loaded"
+    | "workspace_edit.saved"
+    | "review_note.saved"
+    | "review_note.resolved"
+    | "summary.exported";
+  entity_type: "session" | "diff" | "workspace_edit" | "review_note" | "summary";
+  entity_id: string;
+  metadata: Record<string, string | number | boolean>;
+  created_at: string;
+}
+
 export interface CompareSessionBundle {
   session: CompareSessionRecord;
   branches: SessionBranchRecord[];
   fileDiffs: FileDiffRecord[];
   workspaceEdits: WorkspaceEditRecord[];
+  pullRequests: PullRequestImportRecord[];
+  reviewNotes: ReviewNoteRecord[];
+  auditEvents: AuditEventRecord[];
 }
 
 export interface SavedCompareSessionSummary {
@@ -73,6 +105,7 @@ export interface SavedCompareSessionSummary {
   baseBranch: string;
   compareBranches: string[];
   branchHeads: Record<string, string>;
+  pullRequests: ImportedPullRequest[];
   savedAt: string;
   lastOpenedAt?: string;
 }

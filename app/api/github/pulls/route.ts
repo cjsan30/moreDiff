@@ -2,28 +2,32 @@ import { NextResponse } from "next/server";
 
 import { resolveGitHubRouteToken } from "@/app/api/github/auth-token";
 import {
-  listCompareSessionsForToken,
-  markCompareSessionOpenedForToken,
-  saveCompareSessionForToken,
-} from "@/src/data/compare-session-store";
-import type { ImportedPullRequest } from "@/src/domain/types";
+  createPullRequestOnGitHub,
+  listPullRequestsFromGitHub,
+} from "@/src/data/github-session-service";
 import { GitHubRequestError } from "@/src/github/client";
 
 export async function GET(request: Request) {
   try {
+    const url = new URL(request.url);
+    const repoUrl = url.searchParams.get("repoUrl") ?? "";
     const token = await resolveGitHubRouteToken(
       request.headers.get("x-morediff-token"),
     );
-    const sessions = await listCompareSessionsForToken({ token });
+    const pullRequests = await listPullRequestsFromGitHub({
+      token,
+      repoUrl,
+    });
+
     return NextResponse.json({
-      sessions,
+      pullRequests,
     });
   } catch (error) {
     return NextResponse.json(
       {
-        sessions: [],
+        pullRequests: [],
         error:
-          error instanceof Error ? error.message : "failed to list saved sessions",
+          error instanceof Error ? error.message : "failed to list pull requests",
       },
       {
         status: error instanceof GitHubRequestError ? error.status : 400,
@@ -37,40 +41,31 @@ export async function POST(request: Request) {
     const body = (await request.json()) as {
       token?: string;
       repoUrl?: string;
+      title?: string;
+      body?: string;
       baseBranch?: string;
-      compareBranches?: string[];
-      branchHeads?: Record<string, string>;
-      pullRequests?: ImportedPullRequest[];
-      markOpened?: boolean;
+      headBranch?: string;
+      draft?: boolean;
     };
     const token = await resolveGitHubRouteToken(body.token);
-    const session = await saveCompareSessionForToken({
+    const pullRequest = await createPullRequestOnGitHub({
       token,
       repoUrl: body.repoUrl ?? "",
+      title: body.title ?? "",
+      body: body.body,
       baseBranch: body.baseBranch ?? "",
-      compareBranches: body.compareBranches ?? [],
-      branchHeads: body.branchHeads ?? {},
-      pullRequests: body.pullRequests,
+      headBranch: body.headBranch ?? "",
+      draft: body.draft,
     });
 
-    if (body.markOpened) {
-      const openedSession = await markCompareSessionOpenedForToken({
-        token,
-        sessionId: session.id,
-      });
-      return NextResponse.json({
-        session: openedSession,
-      });
-    }
-
     return NextResponse.json({
-      session,
+      pullRequest,
     });
   } catch (error) {
     return NextResponse.json(
       {
         error:
-          error instanceof Error ? error.message : "failed to save compare session",
+          error instanceof Error ? error.message : "failed to create pull request",
       },
       {
         status: error instanceof GitHubRequestError ? error.status : 400,

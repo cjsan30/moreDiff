@@ -360,6 +360,168 @@ input {
   margin-top: 8px;
 }
 
+.reviewNotesPanel,
+.publishPanel {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.reviewNotesHeading,
+.pullRequestImportHeading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+}
+
+.reviewNotesHeading h3,
+.pullRequestImportHeading h3 {
+  margin: 0;
+}
+
+.reviewNotesHeading p,
+.pullRequestImportHeading p {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.reviewNotesHeading label {
+  display: grid;
+  gap: 6px;
+  min-width: 180px;
+}
+
+.reviewNotesHeading span {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.reviewNotesHeading select,
+.reviewNotesPanel textarea,
+.publishFields input,
+.publishFields textarea {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: white;
+}
+
+.reviewNotesHeading select {
+  padding: 10px 12px;
+}
+
+.reviewNotesPanel textarea {
+  width: 100%;
+  min-height: 110px;
+  margin-top: 14px;
+  padding: 12px;
+  resize: vertical;
+}
+
+.publishFields {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.publishFields label {
+  display: grid;
+  gap: 6px;
+}
+
+.publishFields span {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.publishFields input,
+.publishFields textarea {
+  width: 100%;
+  padding: 12px;
+}
+
+.publishFields textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.publishStatus {
+  margin: 12px 0 0;
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.reviewNoteActions,
+.pullRequestActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: start;
+}
+
+.reviewNoteActions {
+  margin-top: 12px;
+}
+
+.reviewNoteActions button,
+.pullRequestActions button {
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: var(--accent);
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.reviewNoteActions button:disabled,
+.pullRequestActions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.reviewNoteActions .secondaryButton,
+.pullRequestActions .secondaryButton {
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--ink);
+}
+
+.reviewNoteList {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reviewNoteList li {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+}
+
+.reviewNoteList span {
+  display: inline-flex;
+  margin-left: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.reviewNoteList p {
+  margin: 8px 0 0;
+  color: var(--ink);
+}
+
 .matrixHeader,
 .matrixRow {
   display: grid;
@@ -519,6 +681,17 @@ input {
   background: var(--success-soft);
   color: var(--success);
   font-weight: 700;
+}
+
+.exportPreview {
+  max-height: 320px;
+  margin-top: 12px;
+  padding: 14px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #111827;
+  color: #f9fafb;
 }
 
 .connectPanel {
@@ -700,6 +873,48 @@ input {
   color: var(--success);
 }
 
+.pullRequestImportCard {
+  margin-top: 20px;
+  padding: 18px;
+  border: 1px solid rgba(22, 101, 52, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--ink);
+}
+
+.pullRequestList {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.pullRequestOption {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.pullRequestOption input {
+  grid-row: span 2;
+  margin-top: 3px;
+}
+
+.pullRequestOption span {
+  font-weight: 800;
+}
+
+.pullRequestOption small {
+  color: var(--muted);
+}
+
+.pullRequestOption.disabled {
+  opacity: 0.58;
+}
+
 .errorNotice {
   background: #fee2e2;
   color: #991b1b;
@@ -749,6 +964,11 @@ input {
   }
 
   .recentSessionItem {
+    flex-direction: column;
+  }
+
+  .reviewNotesHeading,
+  .pullRequestImportHeading {
     flex-direction: column;
   }
 }

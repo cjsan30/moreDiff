@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { LIVE_COMPARE_STORAGE_KEY } from "@/src/domain/compare-launch";
+import type { ImportedPullRequest } from "@/src/domain/types";
 import {
   markRecentCompareSessionOpened,
   mergeRecentCompareSessions,
@@ -49,6 +50,16 @@ interface PersistedCompareSessionsResult {
   error?: string;
 }
 
+interface PersistedCompareSessionResult {
+  session?: RecentCompareSession;
+  error?: string;
+}
+
+interface PullRequestsResult {
+  pullRequests: ImportedPullRequest[];
+  error?: string;
+}
+
 interface RepositoryOption {
   owner: string;
   name: string;
@@ -78,12 +89,21 @@ export function PatConnectionForm() {
   const [recentSessions, setRecentSessions] = useState<RecentCompareSession[]>(
     [],
   );
+  const [pullRequests, setPullRequests] = useState<ImportedPullRequest[]>([]);
+  const [selectedPullRequestNumbers, setSelectedPullRequestNumbers] = useState<
+    number[]
+  >([]);
   const [pendingRecentSessionId, setPendingRecentSessionId] = useState("");
+  const [isLoadingPullRequests, setIsLoadingPullRequests] = useState(false);
+  const [pullRequestError, setPullRequestError] = useState("");
 
   const compareBranchOptions = useMemo(
     () =>
       (result?.branches ?? []).filter((branch) => branch.name !== baseBranch),
     [baseBranch, result],
+  );
+  const selectedPullRequests = pullRequests.filter((pullRequest) =>
+    selectedPullRequestNumbers.includes(pullRequest.number),
   );
 
   useEffect(() => {
@@ -174,9 +194,9 @@ export function PatConnectionForm() {
   async function persistRecentSessionToServer(
     session: RecentCompareSession,
     markOpened: boolean,
-  ) {
+  ): Promise<RecentCompareSession | null> {
     try {
-      await fetch("/api/compare/sessions", {
+      const response = await fetch("/api/compare/sessions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -187,12 +207,134 @@ export function PatConnectionForm() {
           baseBranch: session.baseBranch,
           compareBranches: session.compareBranches,
           branchHeads: session.branchHeads,
+          pullRequests: session.pullRequests,
           markOpened,
         }),
       });
+      const payload = (await response.json()) as PersistedCompareSessionResult;
+      if (!response.ok) {
+        return null;
+      }
+
+      return payload.session ?? null;
     } catch {
       // Local session metadata remains usable even if server persistence is unavailable.
+      return null;
     }
+  }
+
+  async function handleLoadPullRequests() {
+    if (!result) {
+      setPullRequestError("validate repository access before loading pull requests");
+      return;
+    }
+
+    setIsLoadingPullRequests(true);
+    setPullRequestError("");
+
+    try {
+      const query = new URLSearchParams({
+        repoUrl,
+      });
+      const headers: HeadersInit = token.trim()
+        ? {
+            "x-morediff-token": token.trim(),
+          }
+        : {};
+      const response = await fetch(`/api/github/pulls?${query.toString()}`, {
+        headers,
+        cache: "no-store",
+      });
+      const payload = (await response.json()) as PullRequestsResult;
+      if (!response.ok) {
+        throw new Error(payload.error ?? "failed to load pull requests");
+      }
+
+      setPullRequests(payload.pullRequests);
+      setSelectedPullRequestNumbers((current) =>
+        current.filter((number) =>
+          payload.pullRequests.some((pullRequest) => pullRequest.number === number),
+        ),
+      );
+    } catch (caughtError) {
+      setPullRequestError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "failed to load pull requests",
+      );
+    } finally {
+      setIsLoadingPullRequests(false);
+    }
+  }
+
+  function togglePullRequest(pullRequest: ImportedPullRequest) {
+    if (!pullRequest.isSameRepository) {
+      setPullRequestError(
+        "Fork pull requests can be reviewed from GitHub, but branch writeback is limited to same-repository branches.",
+      );
+      return;
+    }
+
+    setPullRequestError("");
+    setSelectedPullRequestNumbers((current) => {
+      if (current.includes(pullRequest.number)) {
+        return current.filter((number) => number !== pullRequest.number);
+      }
+
+      if (current.length >= 6) {
+        return current;
+      }
+
+      return [...current, pullRequest.number];
+    });
+  }
+
+  function applySelectedPullRequests() {
+    if (!result) {
+      return;
+    }
+
+    const selected = pullRequests.filter((pullRequest) =>
+      selectedPullRequestNumbers.includes(pullRequest.number),
+    );
+    const sameRepositoryPullRequests = selected.filter(
+      (pullRequest) => pullRequest.isSameRepository,
+    );
+    const uniqueBaseBranches = new Set(
+      sameRepositoryPullRequests.map((pullRequest) => pullRequest.baseBranch),
+    );
+    if (
+      sameRepositoryPullRequests.length < 2 ||
+      sameRepositoryPullRequests.length > 6
+    ) {
+      setPullRequestError("select between 2 and 6 same-repository pull requests");
+      return;
+    }
+    if (uniqueBaseBranches.size !== 1) {
+      setPullRequestError("selected pull requests must share one base branch");
+      return;
+    }
+
+    const nextBaseBranch = sameRepositoryPullRequests[0].baseBranch;
+    const branchNames = new Set(result.branches.map((branch) => branch.name));
+    const nextCompareBranches = sameRepositoryPullRequests
+      .map((pullRequest) => pullRequest.headBranch)
+      .filter(
+        (branch, index, branches) =>
+          branch !== nextBaseBranch &&
+          branchNames.has(branch) &&
+          branches.indexOf(branch) === index,
+      );
+    if (nextCompareBranches.length !== sameRepositoryPullRequests.length) {
+      setPullRequestError(
+        "all selected PR head branches must still exist in the repository",
+      );
+      return;
+    }
+
+    setBaseBranch(nextBaseBranch);
+    setSelectedBranches(nextCompareBranches);
+    setPullRequestError("");
   }
 
   async function handleLoadRepositories() {
@@ -330,6 +472,11 @@ export function PatConnectionForm() {
     setIsLaunching(true);
     setError("");
 
+    const importedPullRequests = selectedPullRequests.filter(
+      (pullRequest) =>
+        pullRequest.baseBranch === baseBranch &&
+        selectedBranches.includes(pullRequest.headBranch),
+    );
     const branchHeads = Object.fromEntries(
       result.branches
         .filter(
@@ -338,32 +485,46 @@ export function PatConnectionForm() {
         )
         .map((branch) => [branch.name, branch.headSha]),
     );
+    for (const pullRequest of importedPullRequests) {
+      branchHeads[pullRequest.headBranch] = pullRequest.headSha;
+    }
     const nextRecentSessions = upsertRecentCompareSession(recentSessions, {
       repoUrl,
       baseBranch,
       compareBranches: selectedBranches,
       branchHeads,
+      pullRequests: importedPullRequests,
     }, { markOpened: true });
     const nextSession = nextRecentSessions[0];
     setRecentSessions(nextRecentSessions);
     writeRecentCompareSessions(nextRecentSessions);
-    void persistRecentSessionToServer(nextSession, true);
+    const persistedSession = await persistRecentSessionToServer(nextSession, true);
+    const launchSession = persistedSession ?? nextSession;
+    if (persistedSession) {
+      const mergedSessions = mergeRecentCompareSessions(
+        nextRecentSessions.filter((session) => session.id !== nextSession.id),
+        [persistedSession],
+      );
+      setRecentSessions(mergedSessions);
+      writeRecentCompareSessions(mergedSessions);
+    }
 
     window.sessionStorage.setItem(
       LIVE_COMPARE_STORAGE_KEY,
       JSON.stringify({
-        sessionId: nextSession.id,
+        sessionId: launchSession.id,
         token: token.trim(),
         repoUrl,
         baseBranch,
         compareBranches: selectedBranches,
+        pullRequests: importedPullRequests,
       }),
     );
 
     router.push("/compare");
   }
 
-  function handleReopenRecentSession(session: RecentCompareSession) {
+  async function handleReopenRecentSession(session: RecentCompareSession) {
     if (!hasGitHubAuthentication) {
       setError("sign in with GitHub or enter a PAT before reopening a saved session");
       return;
@@ -375,16 +536,31 @@ export function PatConnectionForm() {
     );
     setRecentSessions(nextRecentSessions);
     writeRecentCompareSessions(nextRecentSessions);
-    void persistRecentSessionToServer(session, true);
+    const persistedSession = await persistRecentSessionToServer(session, true);
+    const launchSession = persistedSession ?? {
+      ...session,
+      lastOpenedAt:
+        nextRecentSessions.find((candidate) => candidate.id === session.id)
+          ?.lastOpenedAt ?? session.lastOpenedAt,
+    };
+    if (persistedSession && persistedSession.id !== session.id) {
+      const mergedSessions = mergeRecentCompareSessions(
+        nextRecentSessions.filter((candidate) => candidate.id !== session.id),
+        [persistedSession],
+      );
+      setRecentSessions(mergedSessions);
+      writeRecentCompareSessions(mergedSessions);
+    }
 
     window.sessionStorage.setItem(
       LIVE_COMPARE_STORAGE_KEY,
       JSON.stringify({
-        sessionId: session.id,
+        sessionId: launchSession.id,
         token: token.trim(),
-        repoUrl: session.repoUrl,
-        baseBranch: session.baseBranch,
-        compareBranches: session.compareBranches,
+        repoUrl: launchSession.repoUrl,
+        baseBranch: launchSession.baseBranch,
+        compareBranches: launchSession.compareBranches,
+        pullRequests: launchSession.pullRequests,
       }),
     );
 
@@ -395,6 +571,10 @@ export function PatConnectionForm() {
     setRepoUrl(session.repoUrl);
     setResult(null);
     setError("");
+    setPullRequests(session.pullRequests);
+    setSelectedPullRequestNumbers(
+      session.pullRequests.map((pullRequest) => pullRequest.number),
+    );
     setPendingRecentSessionId(session.id);
   }
 
@@ -473,6 +653,16 @@ export function PatConnectionForm() {
                     <span>
                       Compare <strong>{session.compareBranches.join(", ")}</strong>
                     </span>
+                    {session.pullRequests.length > 0 ? (
+                      <span>
+                        PRs{" "}
+                        <strong>
+                          {session.pullRequests
+                            .map((pullRequest) => `#${pullRequest.number}`)
+                            .join(", ")}
+                        </strong>
+                      </span>
+                    ) : null}
                     <time dateTime={session.savedAt}>
                       Saved {formatSavedAt(session.savedAt)}
                     </time>
@@ -546,6 +736,8 @@ export function PatConnectionForm() {
             onChange={(event) => {
               setRepoUrl(event.target.value);
               setResult(null);
+              setPullRequests([]);
+              setSelectedPullRequestNumbers([]);
             }}
           >
             {repositoryOptions.map((repository) => (
@@ -566,6 +758,8 @@ export function PatConnectionForm() {
           onChange={(event) => {
             setRepoUrl(event.target.value);
             setResult(null);
+            setPullRequests([]);
+            setSelectedPullRequestNumbers([]);
           }}
         />
       </label>
@@ -597,8 +791,77 @@ export function PatConnectionForm() {
             Default branch: <strong>{result.repository.defaultBranch}</strong>
           </p>
           <p>
-            Visible branches sampled: <strong>{result.branches.length}</strong>
+            Visible branches loaded: <strong>{result.branches.length}</strong>
           </p>
+          <section className="pullRequestImportCard">
+            <div className="pullRequestImportHeading">
+              <div>
+                <h3>Import pull requests</h3>
+                <p>
+                  Select 2 to 6 same-repository PRs to auto-fill the shared base
+                  branch and compare branches from current PR heads.
+                </p>
+              </div>
+              <div className="pullRequestActions">
+                <button
+                  type="button"
+                  className="secondaryButton"
+                  onClick={handleLoadPullRequests}
+                  disabled={isLoadingPullRequests}
+                >
+                  {isLoadingPullRequests ? "Refreshing PRs..." : "Load / refresh PRs"}
+                </button>
+                <button
+                  type="button"
+                  onClick={applySelectedPullRequests}
+                  disabled={selectedPullRequestNumbers.length < 2}
+                >
+                  Apply selected PRs
+                </button>
+              </div>
+            </div>
+            {pullRequestError ? (
+              <p className="errorNotice">{pullRequestError}</p>
+            ) : null}
+            {pullRequests.length > 0 ? (
+              <div className="pullRequestList">
+                {pullRequests.map((pullRequest) => {
+                  const checked = selectedPullRequestNumbers.includes(
+                    pullRequest.number,
+                  );
+                  return (
+                    <label
+                      className={
+                        pullRequest.isSameRepository
+                          ? "pullRequestOption"
+                          : "pullRequestOption disabled"
+                      }
+                      key={pullRequest.number}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={!pullRequest.isSameRepository}
+                        onChange={() => togglePullRequest(pullRequest)}
+                      />
+                      <span>
+                        #{pullRequest.number} {pullRequest.title}
+                      </span>
+                      <small>
+                        {pullRequest.headBranch} {"->"} {pullRequest.baseBranch}
+                        {pullRequest.isSameRepository ? "" : " - fork read-only"}
+                      </small>
+                    </label>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="hintText">
+                Load open PRs when you want the session shape to follow GitHub PR
+                heads.
+              </p>
+            )}
+          </section>
           {pendingRecentSessionId ? (
             <p className="hintText">
               A recent session shape was applied where matching branches were

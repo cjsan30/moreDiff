@@ -9,6 +9,81 @@ import {
 import { validateSaveBranchFileInput } from "@/src/domain/save-branch-file";
 import { GitHubClient } from "@/src/github/client";
 
+export async function listPullRequestsFromGitHub(input: {
+  token: string;
+  repoUrl: string;
+}) {
+  const token = assertPatToken(input.token);
+  const repositoryRef = parseGitHubRepositoryUrl(input.repoUrl);
+  const client = new GitHubClient(token);
+
+  return client.listPullRequests(repositoryRef);
+}
+
+export async function createPullRequestOnGitHub(input: {
+  token: string;
+  repoUrl: string;
+  title: string;
+  body?: string;
+  baseBranch: string;
+  headBranch: string;
+  draft?: boolean;
+}) {
+  const token = assertPatToken(input.token);
+  const repositoryRef = parseGitHubRepositoryUrl(input.repoUrl);
+  const title = input.title.trim();
+  const baseBranch = input.baseBranch.trim();
+  const headBranch = input.headBranch.trim();
+  if (!title) {
+    throw new Error("pull request title is required");
+  }
+  if (!baseBranch) {
+    throw new Error("base branch is required");
+  }
+  if (!headBranch) {
+    throw new Error("head branch is required");
+  }
+  if (baseBranch === headBranch) {
+    throw new Error("pull request head branch must differ from base branch");
+  }
+
+  const client = new GitHubClient(token);
+  return client.createPullRequest({
+    ref: repositoryRef,
+    title,
+    body: input.body,
+    baseBranch,
+    headBranch,
+    draft: input.draft,
+  });
+}
+
+export async function updatePullRequestOnGitHub(input: {
+  token: string;
+  repoUrl: string;
+  pullNumber: number;
+  title?: string;
+  body?: string;
+  baseBranch?: string;
+  state?: "open" | "closed";
+}) {
+  const token = assertPatToken(input.token);
+  const repositoryRef = parseGitHubRepositoryUrl(input.repoUrl);
+  if (!Number.isInteger(input.pullNumber) || input.pullNumber <= 0) {
+    throw new Error("pull request number is required");
+  }
+
+  const client = new GitHubClient(token);
+  return client.updatePullRequest({
+    ref: repositoryRef,
+    pullNumber: input.pullNumber,
+    title: input.title,
+    body: input.body,
+    baseBranch: input.baseBranch,
+    state: input.state,
+  });
+}
+
 export async function validatePatConnection(input: {
   token: string;
   repoUrl?: string;
@@ -43,7 +118,7 @@ export async function validatePatConnection(input: {
     viewerLogin: viewer.login,
     repositories,
     repository,
-    branches: branches.slice(0, 20),
+    branches,
   };
 }
 

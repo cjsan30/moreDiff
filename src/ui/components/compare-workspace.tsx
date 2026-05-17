@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import type { CompareSessionViewModel } from "@/src/domain/types";
+import type { CompareSessionViewModel, ReviewNote } from "@/src/domain/types";
 import {
   buildLoadedWorkspaceContentKeys,
   buildWorkspaceDraftMap,
@@ -20,6 +20,40 @@ import { DiffView, type DiffViewMode } from "@/src/ui/components/diff-view";
 
 type FileFilter = "any" | "overlap" | "all" | "branch";
 const FILE_PAGE_SIZE = 80;
+
+interface ReviewNotesResult {
+  notes: ReviewNote[];
+  error?: string;
+}
+
+interface ReviewNoteResult {
+  note?: ReviewNote;
+  error?: string;
+}
+
+interface ExportSummaryResult {
+  filename?: string;
+  markdown?: string;
+  stats?: {
+    branches: number;
+    files: number;
+    overlapFiles: number;
+    notes: number;
+    pullRequests: number;
+  };
+  error?: string;
+}
+
+interface PullRequestMutationResult {
+  pullRequest?: {
+    number: number;
+    title: string;
+    url: string;
+    baseBranch: string;
+    headBranch: string;
+  };
+  error?: string;
+}
 
 interface CompareWorkspaceProps {
   session: CompareSessionViewModel;
@@ -57,6 +91,20 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
   const [contentLoadError, setContentLoadError] = useState<string>("");
   const [sessionSaveStatus, setSessionSaveStatus] = useState<string>("");
   const [savingBranchName, setSavingBranchName] = useState<string>("");
+  const [reviewNotes, setReviewNotes] = useState<ReviewNote[]>([]);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [noteBranchName, setNoteBranchName] = useState(session.branches[0]?.name ?? "");
+  const [notesStatus, setNotesStatus] = useState("");
+  const [notesError, setNotesError] = useState("");
+  const [exportMarkdown, setExportMarkdown] = useState("");
+  const [exportStatus, setExportStatus] = useState("");
+  const [publishBranchName, setPublishBranchName] = useState(
+    session.branches[0]?.name ?? "",
+  );
+  const [pullRequestNumber, setPullRequestNumber] = useState("");
+  const [pullRequestTitle, setPullRequestTitle] = useState("");
+  const [pullRequestBody, setPullRequestBody] = useState("");
+  const [pullRequestStatus, setPullRequestStatus] = useState("");
   const [fileFilter, setFileFilter] = useState<FileFilter>("any");
   const [diffViewMode, setDiffViewMode] = useState<DiffViewMode>("unified");
   const [filterBranchName, setFilterBranchName] = useState(
@@ -94,6 +142,9 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
   const activeHunkOverlaps = session.hunkOverlaps.filter(
     (overlap) => overlap.path === selectedPath,
   );
+  const activeReviewNotes = reviewNotes.filter(
+    (note) => note.filePath === selectedPath,
+  );
   const dirtyDraftCount = countWorkspaceDirtyDrafts(drafts, savedContents);
   const branchNames = session.branches.map((branch) => branch.name);
   const visibleRows = filteredRows.slice(0, visibleFileLimit);
@@ -124,6 +175,235 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
   useEffect(() => {
     setVisibleFileLimit(FILE_PAGE_SIZE);
   }, [fileFilter, filterBranchName]);
+
+  useEffect(() => {
+    if (!connection?.sessionId) {
+      return;
+    }
+
+    void loadReviewNotes();
+  }, [connection?.sessionId]);
+
+  useEffect(() => {
+    if (activeBranches.some((branch) => branch.name === noteBranchName)) {
+      return;
+    }
+
+    setNoteBranchName(activeBranches[0]?.name ?? session.branches[0]?.name ?? "");
+  }, [activeBranches, noteBranchName, session.branches]);
+
+  useEffect(() => {
+    if (session.branches.some((branch) => branch.name === publishBranchName)) {
+      return;
+    }
+
+    setPublishBranchName(session.branches[0]?.name ?? "");
+  }, [publishBranchName, session.branches]);
+
+  async function loadReviewNotes() {
+    if (!connection?.sessionId) {
+      return;
+    }
+
+    try {
+      const headers: HeadersInit = connection.token
+        ? {
+            "x-morediff-token": connection.token,
+          }
+        : {};
+      const response = await fetch(
+        `/api/compare/sessions/${encodeURIComponent(connection.sessionId)}/notes`,
+        {
+          headers,
+          cache: "no-store",
+        },
+      );
+      const payload = (await response.json()) as ReviewNotesResult;
+      if (!response.ok) {
+        throw new Error(payload.error ?? "failed to load review notes");
+      }
+
+      setReviewNotes(payload.notes);
+    } catch (error) {
+      setNotesError(
+        error instanceof Error ? error.message : "failed to load review notes",
+      );
+    }
+  }
+
+  async function handleSaveReviewNote(status: ReviewNote["status"] = "open") {
+    if (!connection?.sessionId) {
+      setNotesError("Save the live session before adding review notes.");
+      return;
+    }
+    if (!selectedPath || !noteBranchName) {
+      return;
+    }
+
+    setNotesError("");
+    setNotesStatus("");
+
+    try {
+      const response = await fetch(
+        `/api/compare/sessions/${encodeURIComponent(connection.sessionId)}/notes`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            token: connection.token,
+            branchName: noteBranchName,
+            filePath: selectedPath,
+            body: noteDraft,
+            status,
+          }),
+        },
+      );
+      const payload = (await response.json()) as ReviewNoteResult;
+      if (!response.ok || !payload.note) {
+        throw new Error(payload.error ?? "failed to save review note");
+      }
+
+      setReviewNotes((current) => [
+        payload.note as ReviewNote,
+        ...current.filter((note) => note.id !== payload.note?.id),
+      ]);
+      setNoteDraft("");
+      setNotesStatus(
+        status === "resolved" ? "Review note resolved." : "Review note saved.",
+      );
+    } catch (error) {
+      setNotesError(
+        error instanceof Error ? error.message : "failed to save review note",
+      );
+    }
+  }
+
+  async function handleExportSummary() {
+    if (!connection?.sessionId) {
+      setExportStatus("Demo sessions can be inspected but not exported.");
+      return;
+    }
+
+    setExportStatus("");
+    setExportMarkdown("");
+
+    try {
+      const headers: HeadersInit = connection.token
+        ? {
+            "x-morediff-token": connection.token,
+          }
+        : {};
+      const response = await fetch(
+        `/api/compare/sessions/${encodeURIComponent(connection.sessionId)}/export`,
+        {
+          headers,
+          cache: "no-store",
+        },
+      );
+      const payload = (await response.json()) as ExportSummaryResult;
+      if (!response.ok) {
+        throw new Error(payload.error ?? "failed to export session summary");
+      }
+
+      setExportMarkdown(payload.markdown ?? "");
+      setExportStatus(
+        `Export ready: ${payload.filename ?? "morediff-summary.md"}`,
+      );
+    } catch (error) {
+      setExportStatus(
+        error instanceof Error ? error.message : "failed to export session summary",
+      );
+    }
+  }
+
+  async function handleCreatePullRequest() {
+    if (!connection) {
+      setPullRequestStatus("Connect a GitHub repository before publishing PRs.");
+      return;
+    }
+
+    setPullRequestStatus("");
+
+    try {
+      const response = await fetch("/api/github/pulls", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token: connection.token,
+          repoUrl: connection.repoUrl,
+          title:
+            pullRequestTitle.trim() ||
+            `Merge ${publishBranchName} into ${session.baseBranch}`,
+          body: pullRequestBody,
+          baseBranch: session.baseBranch,
+          headBranch: publishBranchName,
+        }),
+      });
+      const payload = (await response.json()) as PullRequestMutationResult;
+      if (!response.ok || !payload.pullRequest) {
+        throw new Error(payload.error ?? "failed to create pull request");
+      }
+
+      setPullRequestNumber(String(payload.pullRequest.number));
+      setPullRequestStatus(
+        `Created PR #${payload.pullRequest.number}: ${payload.pullRequest.title}`,
+      );
+    } catch (error) {
+      setPullRequestStatus(
+        error instanceof Error ? error.message : "failed to create pull request",
+      );
+    }
+  }
+
+  async function handleUpdatePullRequest() {
+    if (!connection) {
+      setPullRequestStatus("Connect a GitHub repository before updating PRs.");
+      return;
+    }
+
+    const number = Number.parseInt(pullRequestNumber, 10);
+    if (!Number.isInteger(number) || number <= 0) {
+      setPullRequestStatus("Enter a pull request number to update.");
+      return;
+    }
+
+    setPullRequestStatus("");
+
+    try {
+      const response = await fetch(
+        `/api/github/pulls/${encodeURIComponent(String(number))}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            token: connection.token,
+            repoUrl: connection.repoUrl,
+            title: pullRequestTitle.trim() || undefined,
+            body: pullRequestBody || undefined,
+            baseBranch: session.baseBranch,
+          }),
+        },
+      );
+      const payload = (await response.json()) as PullRequestMutationResult;
+      if (!response.ok || !payload.pullRequest) {
+        throw new Error(payload.error ?? "failed to update pull request");
+      }
+
+      setPullRequestStatus(
+        `Updated PR #${payload.pullRequest.number}: ${payload.pullRequest.title}`,
+      );
+    } catch (error) {
+      setPullRequestStatus(
+        error instanceof Error ? error.message : "failed to update pull request",
+      );
+    }
+  }
 
   async function loadBranchContent(
     branchName: string,
@@ -301,6 +581,7 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
           branch: branchName,
           compareBranches: session.branches.map((branch) => branch.name),
           expectedHeadSha,
+          sessionId: connection.sessionId,
           path,
           content,
           message: `Update ${path} from MoreDiff`,
@@ -356,6 +637,13 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
             disabled={!connection}
           >
             Save session
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleExportSummary()}
+            disabled={!connection?.sessionId}
+          >
+            Export summary
           </button>
           <span>
             {connection
@@ -533,6 +821,139 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
             </div>
           ) : null}
 
+          <section className="reviewNotesPanel">
+            <div className="reviewNotesHeading">
+              <div>
+                <h3>Review notes</h3>
+                <p>
+                  Capture manual reconciliation notes for this file before
+                  exporting the session summary.
+                </p>
+              </div>
+              <label>
+                <span>Branch</span>
+                <select
+                  value={noteBranchName}
+                  onChange={(event) => setNoteBranchName(event.target.value)}
+                >
+                  {activeBranches.map((branch) => (
+                    <option key={branch.name} value={branch.name}>
+                      {branch.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <textarea
+              aria-label={`Review note for ${selectedPath}`}
+              placeholder="Write overlap, risk, or follow-up notes for this file."
+              value={noteDraft}
+              onChange={(event) => setNoteDraft(event.target.value)}
+            />
+            <div className="reviewNoteActions">
+              <button
+                type="button"
+                onClick={() => void handleSaveReviewNote("open")}
+                disabled={!connection?.sessionId || noteDraft.trim().length === 0}
+              >
+                Save note
+              </button>
+              <button
+                type="button"
+                className="secondaryButton"
+                onClick={() => void handleSaveReviewNote("resolved")}
+                disabled={!connection?.sessionId || noteDraft.trim().length === 0}
+              >
+                Save resolved
+              </button>
+            </div>
+            {activeReviewNotes.length > 0 ? (
+              <ul className="reviewNoteList">
+                {activeReviewNotes.map((note) => (
+                  <li key={note.id}>
+                    <strong>{note.branchName}</strong>
+                    <span>{note.status}</span>
+                    <p>{note.body}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="emptyState">No notes for this file yet.</p>
+            )}
+          </section>
+
+          <section className="publishPanel">
+            <div className="reviewNotesHeading">
+              <div>
+                <h3>Publish pull request</h3>
+                <p>
+                  Create or update a GitHub PR from a compare branch after review
+                  edits are saved.
+                </p>
+              </div>
+              <label>
+                <span>Head branch</span>
+                <select
+                  value={publishBranchName}
+                  onChange={(event) => setPublishBranchName(event.target.value)}
+                >
+                  {session.branches.map((branch) => (
+                    <option key={branch.name} value={branch.name}>
+                      {branch.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="publishFields">
+              <label>
+                <span>PR number for update</span>
+                <input
+                  inputMode="numeric"
+                  placeholder="Leave blank to create a new PR"
+                  value={pullRequestNumber}
+                  onChange={(event) => setPullRequestNumber(event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Title</span>
+                <input
+                  placeholder={`Merge ${publishBranchName} into ${session.baseBranch}`}
+                  value={pullRequestTitle}
+                  onChange={(event) => setPullRequestTitle(event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Body</span>
+                <textarea
+                  placeholder="Summarize the branch changes or paste the exported MoreDiff summary."
+                  value={pullRequestBody}
+                  onChange={(event) => setPullRequestBody(event.target.value)}
+                />
+              </label>
+            </div>
+            <div className="reviewNoteActions">
+              <button
+                type="button"
+                onClick={() => void handleCreatePullRequest()}
+                disabled={!connection}
+              >
+                Create PR
+              </button>
+              <button
+                type="button"
+                className="secondaryButton"
+                onClick={() => void handleUpdatePullRequest()}
+                disabled={!connection || pullRequestNumber.trim().length === 0}
+              >
+                Update PR
+              </button>
+            </div>
+            {pullRequestStatus ? (
+              <p className="publishStatus">{pullRequestStatus}</p>
+            ) : null}
+          </section>
+
           <div className="editorGrid">
             {activeBranches.map((branch) => {
               const key = createWorkspaceDraftKey(branch.name, selectedPath);
@@ -607,7 +1028,13 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
           {sessionSaveStatus ? (
             <p className="saveNotice">{sessionSaveStatus}</p>
           ) : null}
+          {notesStatus ? <p className="saveNotice">{notesStatus}</p> : null}
+          {exportStatus ? <p className="saveNotice">{exportStatus}</p> : null}
+          {exportMarkdown ? (
+            <pre className="exportPreview">{exportMarkdown}</pre>
+          ) : null}
           {saveError ? <p className="errorNotice">{saveError}</p> : null}
+          {notesError ? <p className="errorNotice">{notesError}</p> : null}
           {contentLoadError ? (
             <p className="errorNotice">{contentLoadError}</p>
           ) : null}

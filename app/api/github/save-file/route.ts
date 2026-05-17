@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { resolveGitHubRouteToken } from "@/app/api/github/auth-token";
+import { recordWorkspaceEditForToken } from "@/src/data/compare-session-store";
 import { saveBranchFileToGitHub } from "@/src/data/github-session-service";
 import { GitHubRequestError } from "@/src/github/client";
 
@@ -13,6 +14,7 @@ export async function POST(request: Request) {
       branch?: string;
       compareBranches?: string[];
       expectedHeadSha?: string;
+      sessionId?: string;
       path?: string;
       content?: string;
       message?: string;
@@ -30,6 +32,21 @@ export async function POST(request: Request) {
       content: body.content ?? "",
       message: body.message ?? "Update file from MoreDiff",
     });
+
+    if (body.sessionId) {
+      try {
+        await recordWorkspaceEditForToken({
+          token,
+          sessionId: body.sessionId,
+          branchName: body.branch ?? "",
+          filePath: body.path ?? "",
+          originalSha: body.expectedHeadSha ?? "",
+          editedContent: body.content ?? "",
+        });
+      } catch {
+        // GitHub writeback succeeded; persistence audit must not turn it into a failed save.
+      }
+    }
 
     return NextResponse.json({
       ok: true,

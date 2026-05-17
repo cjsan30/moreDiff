@@ -6,6 +6,17 @@ export interface LiveCompareLaunchState {
   repoUrl: string;
   baseBranch: string;
   compareBranches: string[];
+  pullRequests?: Array<{
+    number: number;
+    title: string;
+    url: string;
+    baseBranch: string;
+    headBranch: string;
+    headSha: string;
+    isSameRepository: boolean;
+    updatedAt: string;
+    authorLogin: string;
+  }>;
 }
 
 export function isLiveCompareLaunchState(
@@ -22,6 +33,30 @@ export function isLiveCompareLaunchState(
     typeof candidate.repoUrl === "string" &&
     typeof candidate.baseBranch === "string" &&
     Array.isArray(candidate.compareBranches) &&
-    candidate.compareBranches.every((branch) => typeof branch === "string")
+    candidate.compareBranches.every((branch) => typeof branch === "string") &&
+    (candidate.pullRequests === undefined ||
+      (Array.isArray(candidate.pullRequests) &&
+        candidate.pullRequests.every(isLaunchPullRequest)))
+  );
+}
+
+function isLaunchPullRequest(value: unknown) {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const candidate = value as Partial<
+    NonNullable<LiveCompareLaunchState["pullRequests"]>[number]
+  >;
+  return (
+    typeof candidate.number === "number" &&
+    typeof candidate.title === "string" &&
+    typeof candidate.url === "string" &&
+    typeof candidate.baseBranch === "string" &&
+    typeof candidate.headBranch === "string" &&
+    typeof candidate.headSha === "string" &&
+    typeof candidate.isSameRepository === "boolean" &&
+    typeof candidate.updatedAt === "string" &&
+    typeof candidate.authorLogin === "string"
   );
 }

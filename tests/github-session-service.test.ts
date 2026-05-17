@@ -2,8 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildCompareSessionFromGitHub,
+  createPullRequestOnGitHub,
+  listPullRequestsFromGitHub,
   loadBranchFileContentFromGitHub,
   saveBranchFileToGitHub,
+  updatePullRequestOnGitHub,
   validatePatConnection,
 } from "@/src/data/github-session-service";
 
@@ -104,6 +107,129 @@ describe("github session service validation", () => {
     ).rejects.toThrow("duplicate compare branches are not allowed");
 
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("lists open pull requests for PR-based session import", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      Response.json([
+        {
+          number: 7,
+          title: "Feature A",
+          state: "open",
+          html_url: "https://github.com/openai/codex/pull/7",
+          updated_at: "2026-05-17T00:00:00Z",
+          user: {
+            login: "octo",
+          },
+          base: {
+            ref: "main",
+            repo: {
+              full_name: "openai/codex",
+            },
+          },
+          head: {
+            ref: "feature/a",
+            sha: "head-a",
+            repo: {
+              full_name: "openai/codex",
+            },
+          },
+        },
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      listPullRequestsFromGitHub({
+        token: VALID_TOKEN,
+        repoUrl: VALID_REPO_URL,
+      }),
+    ).resolves.toEqual([
+      {
+        number: 7,
+        title: "Feature A",
+        state: "open",
+        url: "https://github.com/openai/codex/pull/7",
+        baseBranch: "main",
+        headBranch: "feature/a",
+        headSha: "head-a",
+        isSameRepository: true,
+        updatedAt: "2026-05-17T00:00:00Z",
+        authorLogin: "octo",
+      },
+    ]);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.github.com/repos/openai/codex/pulls?state=open&per_page=100&sort=updated&direction=desc",
+      expect.objectContaining({
+        cache: "no-store",
+      }),
+    );
+  });
+
+  it("rejects pull request creation without a title before GitHub calls", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      createPullRequestOnGitHub({
+        token: VALID_TOKEN,
+        repoUrl: VALID_REPO_URL,
+        title: "   ",
+        baseBranch: "main",
+        headBranch: "feature/a",
+      }),
+    ).rejects.toThrow("pull request title is required");
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("updates pull request metadata through GitHub", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      Response.json({
+        number: 7,
+        title: "Updated title",
+        state: "open",
+        html_url: "https://github.com/openai/codex/pull/7",
+        updated_at: "2026-05-17T01:00:00Z",
+        user: {
+          login: "octo",
+        },
+        base: {
+          ref: "main",
+          repo: {
+            full_name: "openai/codex",
+          },
+        },
+        head: {
+          ref: "feature/a",
+          sha: "head-a",
+          repo: {
+            full_name: "openai/codex",
+          },
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      updatePullRequestOnGitHub({
+        token: VALID_TOKEN,
+        repoUrl: VALID_REPO_URL,
+        pullNumber: 7,
+        title: "Updated title",
+      }),
+    ).resolves.toMatchObject({
+      number: 7,
+      title: "Updated title",
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.github.com/repos/openai/codex/pulls/7",
+      expect.objectContaining({
+        method: "PATCH",
+      }),
+    );
   });
 
   it("rejects compare requests when the base branch is included before GitHub calls", async () => {

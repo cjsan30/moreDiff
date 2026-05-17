@@ -52,6 +52,7 @@ describe("recent compare session persistence", () => {
         branchHeads: {
           "feature/a": "head-a",
         },
+        pullRequests: [],
         savedAt: "2026-05-17T00:00:00.000Z",
         lastOpenedAt: "2026-05-17T00:00:00.000Z",
       },
@@ -79,5 +80,39 @@ describe("recent compare session persistence", () => {
         "2026-05-17T01:00:00.000Z",
       )[0].lastOpenedAt,
     ).toBe("2026-05-17T01:00:00.000Z");
+  });
+
+  it("reuses a server session id when upserting the same repository and branch shape", () => {
+    const sessions = upsertRecentCompareSession(
+      [
+        {
+          id: "session_server",
+          repoUrl: "https://github.com/acme/repo",
+          baseBranch: "main",
+          compareBranches: ["feature/a", "feature/b"],
+          branchHeads: {},
+          pullRequests: [],
+          savedAt: "2026-05-17T00:00:00.000Z",
+        },
+      ],
+      {
+        repoUrl: "https://github.com/acme/repo",
+        baseBranch: "main",
+        compareBranches: ["feature/b", "feature/a"],
+        branchHeads: {
+          "feature/a": "head-a",
+        },
+      },
+      {
+        now: "2026-05-17T01:00:00.000Z",
+      },
+    );
+
+    expect(sessions[0]).toMatchObject({
+      id: "session_server",
+      branchHeads: {
+        "feature/a": "head-a",
+      },
+    });
   });
 });

@@ -43,6 +43,30 @@ export interface HunkOverlap {
   branches: string[];
 }
 
+export interface ReviewNote {
+  id: string;
+  sessionId: string;
+  branchName: string;
+  filePath: string;
+  lineNumber?: number;
+  body: string;
+  status: "open" | "resolved";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ImportedPullRequest {
+  number: number;
+  title: string;
+  url: string;
+  baseBranch: string;
+  headBranch: string;
+  headSha: string;
+  isSameRepository: boolean;
+  updatedAt: string;
+  authorLogin: string;
+}
+
 export interface CompareSessionViewModel extends CompareSessionInput {
   fileMatrix: FileMatrixRow[];
   overlapFiles: string[];

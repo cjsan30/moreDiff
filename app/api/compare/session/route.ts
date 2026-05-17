@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { resolveGitHubRouteToken } from "@/app/api/github/auth-token";
 import { saveCompareSessionForToken } from "@/src/data/compare-session-store";
 import { buildCompareSessionFromGitHub } from "@/src/data/github-session-service";
+import type { ImportedPullRequest } from "@/src/domain/types";
 import { GitHubRequestError } from "@/src/github/client";
 
 export async function POST(request: Request) {
@@ -12,6 +13,7 @@ export async function POST(request: Request) {
       repoUrl?: string;
       baseBranch?: string;
       compareBranches?: string[];
+      pullRequests?: ImportedPullRequest[];
     };
 
     const token = await resolveGitHubRouteToken(body.token);
@@ -30,6 +32,7 @@ export async function POST(request: Request) {
         session.branches.map((branch) => [branch.name, branch.headSha]),
       ),
       viewModel: session,
+      pullRequests: body.pullRequests,
     });
 
     return NextResponse.json(session);
