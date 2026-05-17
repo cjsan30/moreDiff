@@ -44,6 +44,14 @@ interface ExportSummaryResult {
   error?: string;
 }
 
+interface AiSummaryResult {
+  source?: "openai" | "deterministic";
+  model?: string;
+  summary?: string;
+  fallbackReason?: string;
+  error?: string;
+}
+
 interface PullRequestMutationResult {
   pullRequest?: {
     number: number;
@@ -98,6 +106,8 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
   const [notesError, setNotesError] = useState("");
   const [exportMarkdown, setExportMarkdown] = useState("");
   const [exportStatus, setExportStatus] = useState("");
+  const [aiSummary, setAiSummary] = useState("");
+  const [aiSummaryStatus, setAiSummaryStatus] = useState("");
   const [publishBranchName, setPublishBranchName] = useState(
     session.branches[0]?.name ?? "",
   );
@@ -314,6 +324,46 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
     } catch (error) {
       setExportStatus(
         error instanceof Error ? error.message : "failed to export session summary",
+      );
+    }
+  }
+
+  async function handleGenerateAiSummary() {
+    if (!connection?.sessionId) {
+      setAiSummaryStatus("Demo sessions can be inspected but not AI-summarized.");
+      return;
+    }
+
+    setAiSummary("");
+    setAiSummaryStatus("");
+
+    try {
+      const headers: HeadersInit = connection.token
+        ? {
+            "x-morediff-token": connection.token,
+          }
+        : {};
+      const response = await fetch(
+        `/api/compare/sessions/${encodeURIComponent(connection.sessionId)}/ai-summary`,
+        {
+          headers,
+          cache: "no-store",
+        },
+      );
+      const payload = (await response.json()) as AiSummaryResult;
+      if (!response.ok) {
+        throw new Error(payload.error ?? "failed to generate AI summary");
+      }
+
+      setAiSummary(payload.summary ?? "");
+      setAiSummaryStatus(
+        payload.source === "openai"
+          ? `AI summary generated with ${payload.model}.`
+          : `Fallback summary generated. ${payload.fallbackReason ?? ""}`.trim(),
+      );
+    } catch (error) {
+      setAiSummaryStatus(
+        error instanceof Error ? error.message : "failed to generate AI summary",
       );
     }
   }
@@ -644,6 +694,13 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
             disabled={!connection?.sessionId}
           >
             Export summary
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleGenerateAiSummary()}
+            disabled={!connection?.sessionId}
+          >
+            AI summary
           </button>
           <span>
             {connection
@@ -1033,6 +1090,10 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
           {exportMarkdown ? (
             <pre className="exportPreview">{exportMarkdown}</pre>
           ) : null}
+          {aiSummaryStatus ? (
+            <p className="saveNotice">{aiSummaryStatus}</p>
+          ) : null}
+          {aiSummary ? <pre className="exportPreview">{aiSummary}</pre> : null}
           {saveError ? <p className="errorNotice">{saveError}</p> : null}
           {notesError ? <p className="errorNotice">{notesError}</p> : null}
           {contentLoadError ? (
