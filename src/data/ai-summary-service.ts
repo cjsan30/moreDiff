@@ -16,7 +16,7 @@ export async function createAiReviewSummary(
   input: CreateAiReviewSummaryInput,
 ): Promise<AiReviewSummaryResult> {
   const model =
-    input.model ?? process.env.OPENAI_SUMMARY_MODEL ?? "gpt-5.4-mini";
+    input.model ?? process.env.OPENAI_SUMMARY_MODEL ?? "gpt-5";
   const openAiApiKey = input.openAiApiKey ?? process.env.OPENAI_API_KEY ?? "";
   if (!openAiApiKey) {
     return {
