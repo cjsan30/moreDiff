@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { resolveGitHubRouteToken } from "@/app/api/github/auth-token";
 import { loadBranchFileContentFromGitHub } from "@/src/data/github-session-service";
 import { GitHubRequestError } from "@/src/github/client";
 
@@ -15,8 +16,9 @@ export async function POST(request: Request) {
       path?: string;
     };
 
+    const token = await resolveGitHubRouteToken(body.token);
     const file = await loadBranchFileContentFromGitHub({
-      token: body.token ?? "",
+      token,
       repoUrl: body.repoUrl ?? "",
       baseBranch: body.baseBranch ?? "",
       branch: body.branch ?? "",

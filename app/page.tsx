@@ -15,7 +15,7 @@ export default function HomePage() {
           <Link href="/connect" className="primaryAction">
             Connect GitHub Repository
           </Link>
-          <Link href="/compare" className="secondaryAction">
+          <Link href="/compare?mode=demo" className="secondaryAction">
             Open Demo Workspace
           </Link>
         </div>

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { resolveGitHubRouteToken } from "@/app/api/github/auth-token";
 import { validatePatConnection } from "@/src/data/github-session-service";
 import { GitHubRequestError } from "@/src/github/client";
 
@@ -10,8 +11,9 @@ export async function POST(request: Request) {
       repoUrl?: string;
     };
 
+    const token = await resolveGitHubRouteToken(body.token);
     const connection = await validatePatConnection({
-      token: body.token ?? "",
+      token,
       repoUrl: body.repoUrl,
     });
 
@@ -19,7 +21,8 @@ export async function POST(request: Request) {
   } catch (error) {
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "failed to validate PAT",
+        error:
+          error instanceof Error ? error.message : "failed to validate GitHub access",
       },
       {
         status: error instanceof GitHubRequestError ? error.status : 400,

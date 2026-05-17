@@ -36,6 +36,13 @@ interface ConnectionProbeResult {
   error?: string;
 }
 
+interface OAuthSessionResult {
+  authenticated: boolean;
+  viewerLogin?: string;
+  repositories?: RepositoryOption[];
+  error?: string;
+}
+
 interface RepositoryOption {
   owner: string;
   name: string;
@@ -55,8 +62,10 @@ export function PatConnectionForm() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRepositories, setIsLoadingRepositories] = useState(false);
+  const [isCheckingOAuth, setIsCheckingOAuth] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
   const [loadedViewerLogin, setLoadedViewerLogin] = useState("");
+  const [oauthViewerLogin, setOauthViewerLogin] = useState("");
   const [repositoryOptions, setRepositoryOptions] = useState<RepositoryOption[]>(
     [],
   );
@@ -73,6 +82,7 @@ export function PatConnectionForm() {
 
   useEffect(() => {
     setRecentSessions(readRecentCompareSessions());
+    void hydrateOAuthSession();
   }, []);
 
   useEffect(() => {
@@ -92,7 +102,51 @@ export function PatConnectionForm() {
     setPendingRecentSessionId("");
   }, [pendingRecentSessionId, recentSessions, result]);
 
+  const hasGitHubAuthentication =
+    token.trim().length > 0 || oauthViewerLogin.trim().length > 0;
+
+  async function hydrateOAuthSession() {
+    setIsCheckingOAuth(true);
+    try {
+      const response = await fetch("/api/github/oauth/session", {
+        cache: "no-store",
+      });
+      const payload = (await response.json()) as OAuthSessionResult;
+      if (!payload.authenticated) {
+        return;
+      }
+
+      setOauthViewerLogin(payload.viewerLogin ?? "");
+      setLoadedViewerLogin(payload.viewerLogin ?? "");
+      setRepositoryOptions(payload.repositories ?? []);
+      if (!repoUrl.trim() && payload.repositories?.[0]) {
+        setRepoUrl(payload.repositories[0].url);
+      }
+    } catch {
+      setOauthViewerLogin("");
+    } finally {
+      setIsCheckingOAuth(false);
+    }
+  }
+
+  async function handleDisconnectOAuth() {
+    await fetch("/api/github/oauth/session", {
+      method: "DELETE",
+    });
+    setOauthViewerLogin("");
+    if (!token.trim()) {
+      setLoadedViewerLogin("");
+      setRepositoryOptions([]);
+      setResult(null);
+    }
+  }
+
   async function handleLoadRepositories() {
+    if (!hasGitHubAuthentication) {
+      setError("sign in with GitHub or enter a PAT first");
+      return;
+    }
+
     setIsLoadingRepositories(true);
     setError("");
     setResult(null);
@@ -104,7 +158,7 @@ export function PatConnectionForm() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          token,
+          token: token.trim(),
         }),
       });
 
@@ -130,6 +184,11 @@ export function PatConnectionForm() {
   }
 
   async function handleValidate() {
+    if (!hasGitHubAuthentication) {
+      setError("sign in with GitHub or enter a PAT first");
+      return;
+    }
+
     setIsSubmitting(true);
     setError("");
     setResult(null);
@@ -142,7 +201,7 @@ export function PatConnectionForm() {
         },
         body: JSON.stringify({
           repoUrl,
-          token,
+          token: token.trim(),
         }),
       });
 
@@ -238,7 +297,7 @@ export function PatConnectionForm() {
       LIVE_COMPARE_STORAGE_KEY,
       JSON.stringify({
         sessionId: nextSession.id,
-        token,
+        token: token.trim(),
         repoUrl,
         baseBranch,
         compareBranches: selectedBranches,
@@ -249,8 +308,8 @@ export function PatConnectionForm() {
   }
 
   function handleReopenRecentSession(session: RecentCompareSession) {
-    if (token.trim().length === 0) {
-      setError("enter a PAT before reopening a saved session");
+    if (!hasGitHubAuthentication) {
+      setError("sign in with GitHub or enter a PAT before reopening a saved session");
       return;
     }
 
@@ -265,7 +324,7 @@ export function PatConnectionForm() {
       LIVE_COMPARE_STORAGE_KEY,
       JSON.stringify({
         sessionId: session.id,
-        token,
+        token: token.trim(),
         repoUrl: session.repoUrl,
         baseBranch: session.baseBranch,
         compareBranches: session.compareBranches,
@@ -297,12 +356,40 @@ export function PatConnectionForm() {
   return (
     <section className="connectPanel">
       <div className="panelHeading">
-        <h1>Connect a repository with a fine-grained PAT</h1>
+        <h1>Connect GitHub</h1>
         <p>
-          MoreDiff will validate the token against the repository you enter. This
-          bootstrap only validates live access. It does not persist the token yet.
+          Sign in with GitHub OAuth or use a fine-grained PAT fallback. Saved
+          compare sessions keep repository and branch metadata only, not tokens.
         </p>
       </div>
+
+      <section className="authCard">
+        <div>
+          <h2>GitHub OAuth</h2>
+          <p>
+            {oauthViewerLogin
+              ? `Signed in as ${oauthViewerLogin}.`
+              : isCheckingOAuth
+                ? "Checking GitHub OAuth session..."
+                : "Recommended for reopening sessions without storing tokens in the browser."}
+          </p>
+        </div>
+        <div className="authActions">
+          {oauthViewerLogin ? (
+            <button
+              type="button"
+              className="secondaryButton"
+              onClick={handleDisconnectOAuth}
+            >
+              Disconnect
+            </button>
+          ) : (
+            <a className="primaryAction" href="/api/github/oauth/start">
+              Sign in with GitHub
+            </a>
+          )}
+        </div>
+      </section>
 
       {recentSessions.length > 0 ? (
         <section className="recentSessionsCard">
@@ -310,8 +397,8 @@ export function PatConnectionForm() {
             <div>
               <h2>Recent compare sessions</h2>
               <p>
-                Reopen saved repository and branch metadata with the PAT you enter.
-                Tokens are not stored in saved sessions.
+                Reopen saved repository and branch metadata with OAuth or the PAT
+                you enter. Tokens are not stored in saved sessions.
               </p>
             </div>
           </div>
