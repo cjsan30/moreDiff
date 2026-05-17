@@ -184,6 +184,23 @@ describe("github session service validation", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("rejects pull request creation when head and base branches match", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      createPullRequestOnGitHub({
+        token: VALID_TOKEN,
+        repoUrl: VALID_REPO_URL,
+        title: "Open PR",
+        baseBranch: "main",
+        headBranch: "main",
+      }),
+    ).rejects.toThrow("pull request head branch must differ from base branch");
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("updates pull request metadata through GitHub", async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(
       Response.json({
@@ -333,6 +350,52 @@ describe("github session service validation", () => {
     ).toBe(false);
   });
 
+  it("keeps six-branch compare loading bounded to compare and head requests", async () => {
+    const compareBranches = Array.from(
+      { length: 6 },
+      (_, index) => `feature/${index + 1}`,
+    );
+    const fetchMock = vi.fn();
+    for (const branchIndex of compareBranches.keys()) {
+      fetchMock.mockResolvedValueOnce(
+        Response.json({
+          files: Array.from({ length: 25 }, (_, fileIndex) => ({
+            filename: `src/branch-${branchIndex}/file-${fileIndex}.ts`,
+            status: "modified",
+            additions: 1,
+            deletions: 0,
+            patch: `@@ -${fileIndex + 1},1 +${fileIndex + 1},2 @@`,
+          })),
+        }),
+      );
+    }
+    for (const branchName of compareBranches) {
+      fetchMock.mockResolvedValueOnce(
+        Response.json({
+          name: branchName,
+          commit: {
+            sha: `head-${branchName}`,
+          },
+        }),
+      );
+    }
+    vi.stubGlobal("fetch", fetchMock);
+
+    const session = await buildCompareSessionFromGitHub({
+      token: VALID_TOKEN,
+      repoUrl: VALID_REPO_URL,
+      baseBranch: "main",
+      compareBranches,
+    });
+
+    expect(session.branches).toHaveLength(6);
+    expect(session.fileMatrix).toHaveLength(150);
+    expect(fetchMock).toHaveBeenCalledTimes(12);
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).includes("/contents/")),
+    ).toBe(false);
+  });
+
   it("loads one branch file content with head validation", async () => {
     const fetchMock = vi
       .fn()
@@ -403,6 +466,44 @@ describe("github session service validation", () => {
         message: "Update app",
       }),
     ).rejects.toThrow("path is required");
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects save requests with parent directory traversal before GitHub calls", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      saveBranchFileToGitHub({
+        token: VALID_TOKEN,
+        repoUrl: VALID_REPO_URL,
+        ...VALID_SAVE_CONTEXT,
+        branch: "feature/a",
+        path: "../secrets.txt",
+        content: "leak",
+        message: "Update app",
+      }),
+    ).rejects.toThrow("path must not contain parent directory segments");
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects save requests with absolute paths before GitHub calls", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      saveBranchFileToGitHub({
+        token: VALID_TOKEN,
+        repoUrl: VALID_REPO_URL,
+        ...VALID_SAVE_CONTEXT,
+        branch: "feature/a",
+        path: "/etc/passwd",
+        content: "leak",
+        message: "Update app",
+      }),
+    ).rejects.toThrow("path must be relative to the repository root");
 
     expect(fetchMock).not.toHaveBeenCalled();
   });

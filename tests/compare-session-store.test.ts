@@ -16,6 +16,7 @@ import {
 import { createCompareSession } from "@/src/domain/compare-session";
 
 const TOKEN = "github_pat_1234567890123456789012345678901234567890";
+const OTHER_TOKEN = "github_pat_abcdefghijklmnopqrstuvwxyz1234567890";
 
 describe("compare session persistence store", () => {
   afterEach(() => {
@@ -252,4 +253,174 @@ describe("compare session persistence store", () => {
       pullRequests: 1,
     });
   });
+
+  it("isolates saved sessions by GitHub user", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string, init?: RequestInit) => {
+        const token = readBearerToken(init);
+        const viewer =
+          token === OTHER_TOKEN
+            ? {
+                login: "other",
+                id: 99,
+              }
+            : {
+                login: "octo",
+                id: 42,
+              };
+        return Promise.resolve(Response.json(viewer));
+      }),
+    );
+    const dir = await mkdtemp(path.join(tmpdir(), "morediff-store-"));
+    const storeFile = path.join(dir, "store.json");
+    const summary = await saveCompareSessionForToken({
+      token: TOKEN,
+      repoUrl: "https://github.com/octo/repo",
+      baseBranch: "main",
+      compareBranches: ["feature/a", "feature/b"],
+      storeFile,
+      now: "2026-05-17T00:00:00.000Z",
+    });
+
+    await expect(
+      listCompareSessionsForToken({
+        token: OTHER_TOKEN,
+        storeFile,
+      }),
+    ).resolves.toEqual([]);
+    await expect(
+      readCompareSessionBundle({
+        token: OTHER_TOKEN,
+        sessionId: summary.id,
+        storeFile,
+      }),
+    ).rejects.toThrow("saved compare session was not found");
+    await expect(
+      saveReviewNoteForToken({
+        token: OTHER_TOKEN,
+        sessionId: summary.id,
+        branchName: "feature/a",
+        filePath: "src/app.ts",
+        body: "unauthorized note",
+        storeFile,
+      }),
+    ).rejects.toThrow("saved compare session was not found");
+  });
+
+  it("rejects blank review notes without adding audit records", async () => {
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(Response.json({
+        login: "octo",
+        id: 42,
+      })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const dir = await mkdtemp(path.join(tmpdir(), "morediff-store-"));
+    const storeFile = path.join(dir, "store.json");
+    const summary = await saveCompareSessionForToken({
+      token: TOKEN,
+      repoUrl: "https://github.com/octo/repo",
+      baseBranch: "main",
+      compareBranches: ["feature/a", "feature/b"],
+      storeFile,
+      now: "2026-05-17T00:00:00.000Z",
+    });
+
+    await expect(
+      saveReviewNoteForToken({
+        token: TOKEN,
+        sessionId: summary.id,
+        branchName: "feature/a",
+        filePath: "src/app.ts",
+        body: "   ",
+        storeFile,
+      }),
+    ).rejects.toThrow("review note body is required");
+
+    const bundle = await readCompareSessionBundle({
+      token: TOKEN,
+      sessionId: summary.id,
+      storeFile,
+    });
+    expect(bundle.reviewNotes).toEqual([]);
+    expect(bundle.auditEvents.map((event) => event.event_type)).not.toContain(
+      "review_note.saved",
+    );
+  });
+
+  it("persists and exports a six-branch medium-scale session", async () => {
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(Response.json({
+        login: "octo",
+        id: 42,
+      })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const dir = await mkdtemp(path.join(tmpdir(), "morediff-store-"));
+    const storeFile = path.join(dir, "store.json");
+    const viewModel = createCompareSession({
+      repository: {
+        owner: "octo",
+        name: "repo",
+      },
+      baseBranch: "main",
+      branches: Array.from({ length: 6 }, (_, branchIndex) => ({
+        name: `feature/${branchIndex + 1}`,
+        headSha: `head-${branchIndex + 1}`,
+        files: Array.from({ length: 40 }, (_, fileIndex) => ({
+          path: `src/module-${fileIndex.toString().padStart(3, "0")}.ts`,
+          status: "modified" as const,
+          additions: branchIndex + 1,
+          deletions: fileIndex % 2,
+          patch: `@@ -${fileIndex + 1},2 +${fileIndex + 1},3 @@`,
+          content: "",
+          contentLoaded: false,
+        })),
+      })),
+    });
+    const compareBranches = viewModel.branches.map((branch) => branch.name);
+    const summary = await saveCompareSessionForToken({
+      token: TOKEN,
+      repoUrl: "https://github.com/octo/repo",
+      baseBranch: "main",
+      compareBranches,
+      branchHeads: Object.fromEntries(
+        viewModel.branches.map((branch) => [branch.name, branch.headSha]),
+      ),
+      viewModel,
+      storeFile,
+      now: "2026-05-17T00:00:00.000Z",
+    });
+    const bundle = await readCompareSessionBundle({
+      token: TOKEN,
+      sessionId: summary.id,
+      storeFile,
+    });
+    const exported = await exportCompareSessionSummaryForToken({
+      token: TOKEN,
+      sessionId: summary.id,
+      storeFile,
+    });
+    const persistedJson = await readFile(storeFile, "utf8");
+
+    expect(bundle.branches).toHaveLength(6);
+    expect(bundle.fileDiffs).toHaveLength(240);
+    expect(exported.stats).toMatchObject({
+      branches: 6,
+      files: 40,
+      overlapFiles: 40,
+    });
+    expect(persistedJson).not.toContain(TOKEN);
+  });
 });
+
+function readBearerToken(init?: RequestInit) {
+  const headers = init?.headers;
+  if (!headers || headers instanceof Headers || Array.isArray(headers)) {
+    return "";
+  }
+
+  const authorization = headers.Authorization ?? headers.authorization ?? "";
+  return authorization.replace(/^Bearer\s+/i, "");
+}

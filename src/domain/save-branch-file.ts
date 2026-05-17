@@ -42,7 +42,22 @@ export function validateSaveBranchFileInput(input: SaveBranchFileInput): void {
     throw new Error("path is required");
   }
 
+  validateRepositoryFilePath(input.path);
+
   if (input.message.trim().length === 0) {
     throw new Error("commit message is required");
+  }
+}
+
+function validateRepositoryFilePath(input: string): void {
+  const normalized = input.trim().replace(/\\/g, "/");
+  const segments = normalized.split("/");
+
+  if (normalized.startsWith("/")) {
+    throw new Error("path must be relative to the repository root");
+  }
+
+  if (segments.some((segment) => segment === "..")) {
+    throw new Error("path must not contain parent directory segments");
   }
 }

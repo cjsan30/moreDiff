@@ -21,6 +21,10 @@ export function parseGitHubRepositoryUrl(input: string): GitHubRepositoryRef {
     throw new Error("only github.com repositories are supported");
   }
 
+  if (parsed.protocol !== "https:") {
+    throw new Error("repository URL must use https");
+  }
+
   const parts = parsed.pathname
     .replace(/\.git$/, "")
     .split("/")
@@ -42,6 +46,10 @@ export function assertPatToken(input: string): string {
   const token = input.trim();
   if (token.length === 0) {
     throw new Error("personal access token is required");
+  }
+
+  if (/\s/.test(token)) {
+    throw new Error("personal access token must not contain whitespace");
   }
 
   if (token.length < 20) {
