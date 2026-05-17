@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       message?: string;
     };
 
-    await saveBranchFileToGitHub({
+    const savedFile = await saveBranchFileToGitHub({
       token: body.token ?? "",
       repoUrl: body.repoUrl ?? "",
       baseBranch: body.baseBranch ?? "",
@@ -31,6 +31,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
+      headSha: savedFile.headSha,
+      contentSha: savedFile.contentSha,
     });
   } catch (error) {
     return NextResponse.json(

@@ -40,6 +40,15 @@ interface GitHubContentsResponse {
   encoding?: string;
 }
 
+interface GitHubUpdateContentResponse {
+  content?: {
+    sha?: string;
+  };
+  commit: {
+    sha: string;
+  };
+}
+
 export interface GitHubConnectionSummary {
   viewerLogin: string;
   repositories: GitHubAccessibleRepository[];
@@ -177,7 +186,7 @@ export class GitHubClient {
     message: string;
     content: string;
     sha: string;
-  }): Promise<void> {
+  }): Promise<{ headSha: string; contentSha: string }> {
     if (options.branch.trim().length === 0) {
       throw new Error("branch is required");
     }
@@ -190,7 +199,7 @@ export class GitHubClient {
       throw new Error("commit message is required");
     }
 
-    await this.request(
+    const response = await this.request<GitHubUpdateContentResponse>(
       `/repos/${options.ref.owner}/${options.ref.name}/contents/${encodeURIComponent(options.path)}`,
       {
         method: "PUT",
@@ -202,6 +211,11 @@ export class GitHubClient {
         }),
       },
     );
+
+    return {
+      headSha: response.commit.sha,
+      contentSha: response.content?.sha ?? "",
+    };
   }
 
   async getBranchHead(

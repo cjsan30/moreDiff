@@ -266,4 +266,57 @@ describe("github session service validation", () => {
       }),
     );
   });
+
+  it("returns the new branch head after saving a branch file", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          name: "feature/a",
+          commit: {
+            sha: "head-123",
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          sha: "blob-old",
+          content: Buffer.from("old").toString("base64"),
+          encoding: "base64",
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          content: {
+            sha: "blob-new",
+          },
+          commit: {
+            sha: "head-456",
+          },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      saveBranchFileToGitHub({
+        token: VALID_TOKEN,
+        repoUrl: VALID_REPO_URL,
+        ...VALID_SAVE_CONTEXT,
+        path: "src/app.ts",
+        content: "console.log('hi')",
+        message: "Update app",
+      }),
+    ).resolves.toEqual({
+      headSha: "head-456",
+      contentSha: "blob-new",
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "https://api.github.com/repos/openai/codex/contents/src%2Fapp.ts",
+      expect.objectContaining({
+        method: "PUT",
+      }),
+    );
+  });
 });

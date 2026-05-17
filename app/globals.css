@@ -139,7 +139,7 @@ input {
 
 .workspaceStats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(110px, 1fr));
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
   gap: 12px;
 }
 
@@ -237,6 +237,12 @@ input {
   font-style: normal;
 }
 
+.fileButton .dirtyMarker,
+.dirtyInline {
+  color: var(--warning);
+  font-weight: 700;
+}
+
 .emptyState {
   margin-top: 18px;
   color: var(--muted);
@@ -313,6 +319,33 @@ input {
   background: var(--ink);
   color: white;
   cursor: pointer;
+}
+
+.editorCard button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+}
+
+.dirtyBadge,
+.cleanBadge {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 8px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.dirtyBadge {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.cleanBadge {
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .patchBlock {

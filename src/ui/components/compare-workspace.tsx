@@ -3,6 +3,13 @@
 import { useState } from "react";
 
 import type { CompareSessionViewModel } from "@/src/domain/types";
+import {
+  buildWorkspaceDraftMap,
+  countWorkspaceDirtyDrafts,
+  countWorkspaceDirtyDraftsForPath,
+  createWorkspaceDraftKey,
+  isWorkspaceDraftDirty,
+} from "@/src/ui/components/compare-workspace-drafts";
 
 type FileFilter = "any" | "overlap" | "all" | "branch";
 
@@ -16,14 +23,15 @@ interface CompareWorkspaceProps {
 
 export function CompareWorkspace({ session, connection }: CompareWorkspaceProps) {
   const [activePath, setActivePath] = useState(session.fileMatrix[0]?.path ?? "");
-  const [drafts, setDrafts] = useState<Record<string, string>>(() =>
+  const [savedContents, setSavedContents] = useState(() =>
+    buildWorkspaceDraftMap(session),
+  );
+  const [drafts, setDrafts] = useState(() =>
+    buildWorkspaceDraftMap(session),
+  );
+  const [branchHeadShas, setBranchHeadShas] = useState<Record<string, string>>(() =>
     Object.fromEntries(
-      session.branches.flatMap((branch) =>
-        branch.files.map((file) => [
-          `${branch.name}:${file.path}`,
-          file.content,
-        ]),
-      ),
+      session.branches.map((branch) => [branch.name, branch.headSha]),
     ),
   );
   const [lastSaved, setLastSaved] = useState<string>("");
@@ -64,6 +72,28 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
   const activeHunkOverlaps = session.hunkOverlaps.filter(
     (overlap) => overlap.path === selectedPath,
   );
+  const dirtyDraftCount = countWorkspaceDirtyDrafts(drafts, savedContents);
+  const branchNames = session.branches.map((branch) => branch.name);
+
+  function markDraftSaved(
+    branchName: string,
+    path: string,
+    content: string,
+    nextHeadSha?: string,
+  ) {
+    const key = createWorkspaceDraftKey(branchName, path);
+    setSavedContents((current) => ({
+      ...current,
+      [key]: content,
+    }));
+
+    if (nextHeadSha) {
+      setBranchHeadShas((current) => ({
+        ...current,
+        [branchName]: nextHeadSha,
+      }));
+    }
+  }
 
   async function handleSaveBranch(
     branchName: string,
@@ -72,6 +102,7 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
     content: string,
   ) {
     if (!connection) {
+      markDraftSaved(branchName, path, content);
       setLastSaved(`Demo mode only: edited ${path} in ${branchName}`);
       setSaveError("");
       return;
@@ -100,11 +131,15 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
         }),
       });
 
-      const payload = (await response.json()) as { error?: string };
+      const payload = (await response.json()) as {
+        error?: string;
+        headSha?: string;
+      };
       if (!response.ok) {
         throw new Error(payload.error ?? "failed to save branch file");
       }
 
+      markDraftSaved(branchName, path, content, payload.headSha);
       setLastSaved(`Saved ${path} to ${branchName}`);
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "save failed");
@@ -124,6 +159,14 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
           <p className="workspaceSubhead">
             Base branch <strong>{session.baseBranch}</strong> compared against{" "}
             <strong>{session.branches.length}</strong> branches.
+            {dirtyDraftCount > 0 ? (
+              <>
+                {" "}
+                <span className="dirtyInline">
+                  {dirtyDraftCount} unsaved draft{dirtyDraftCount > 1 ? "s" : ""}
+                </span>
+              </>
+            ) : null}
           </p>
         </div>
         <div className="workspaceStats">
@@ -138,6 +181,10 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
           <div>
             <span>Hunk overlaps</span>
             <strong>{session.hunkOverlaps.length}</strong>
+          </div>
+          <div>
+            <span>Unsaved drafts</span>
+            <strong>{dirtyDraftCount}</strong>
           </div>
         </div>
       </header>
@@ -181,6 +228,12 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
             {filteredRows.map((row) => {
               const changedCount = row.branches.filter((branch) => branch.changed).length;
               const isOverlap = changedCount > 1;
+              const dirtyCount = countWorkspaceDirtyDraftsForPath(
+                drafts,
+                savedContents,
+                branchNames,
+                row.path,
+              );
               return (
                 <li key={row.path}>
                   <button
@@ -191,6 +244,11 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
                     <span>{row.path}</span>
                     <small>{changedCount} branch{changedCount > 1 ? "es" : ""}</small>
                     {isOverlap ? <em>overlap</em> : null}
+                    {dirtyCount > 0 ? (
+                      <em className="dirtyMarker">
+                        {dirtyCount} unsaved
+                      </em>
+                    ) : null}
                   </button>
                 </li>
               );
@@ -249,8 +307,10 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
 
           <div className="editorGrid">
             {activeBranches.map((branch) => {
-              const key = `${branch.name}:${selectedPath}`;
+              const key = createWorkspaceDraftKey(branch.name, selectedPath);
               const content = drafts[key] ?? branch.file?.content ?? "";
+              const isDirty = isWorkspaceDraftDirty(drafts, savedContents, key);
+              const expectedHeadSha = branchHeadShas[branch.name] ?? branch.headSha;
               return (
                 <article className="editorCard" key={key}>
                   <header>
@@ -260,18 +320,21 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
                         {branch.file?.status} · +{branch.file?.additions} / -
                         {branch.file?.deletions}
                       </p>
+                      <span className={isDirty ? "dirtyBadge" : "cleanBadge"}>
+                        {isDirty ? "Unsaved changes" : "No unsaved changes"}
+                      </span>
                     </div>
                     <button
                       type="button"
                       onClick={() =>
                         handleSaveBranch(
                           branch.name,
-                          branch.headSha,
+                          expectedHeadSha,
                           selectedPath,
                           content,
                         )
                       }
-                      disabled={savingBranchName === branch.name}
+                      disabled={savingBranchName === branch.name || !isDirty}
                     >
                       {savingBranchName === branch.name ? "Saving..." : "Save branch"}
                     </button>

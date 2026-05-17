@@ -110,7 +110,7 @@ export async function saveBranchFileToGitHub(input: {
     input.path,
   );
 
-  await client.saveBranchFile({
+  const savedFile = await client.saveBranchFile({
     ref: repositoryRef,
     branch: input.branch,
     path: input.path,
@@ -118,4 +118,6 @@ export async function saveBranchFileToGitHub(input: {
     content: input.content,
     sha: existingFile.sha,
   });
+
+  return savedFile;
 }
