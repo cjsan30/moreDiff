@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 
     const connection = await validatePatConnection({
       token: body.token ?? "",
-      repoUrl: body.repoUrl ?? "",
+      repoUrl: body.repoUrl,
     });
 
     return NextResponse.json(connection);

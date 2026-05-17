@@ -2,6 +2,13 @@
 
 This directory contains the operational scripts used by the harness.
 
+## Current Checkout Note
+
+This repository is currently using the harness in standalone mode, so local
+commands should use `scripts/...`, `reports/...`, `project/...`, and
+`configs/...` paths. The portable nested form remains `harness/scripts/...`
+after copying this directory into another repository.
+
 ## Core Validation Commands
 
 Preferred PowerShell entry points:
@@ -50,11 +57,11 @@ Run the baseline in this order:
 Recommended commands:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File harness/scripts/run_harness_preflight.ps1
-powershell -ExecutionPolicy Bypass -File harness/scripts/run_harness_cycle.ps1
-powershell -ExecutionPolicy Bypass -File harness/scripts/generate_profile_docs.ps1
-powershell -ExecutionPolicy Bypass -File harness/scripts/run_retry_handoff.ps1 -DryRun -PromptId <prompt-id>
-powershell -ExecutionPolicy Bypass -File harness/scripts/run_seed_handoff.ps1 -DryRun -PlanFile harness/reports/seed_plans/<plan-file>.md
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_harness_preflight.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_harness_cycle.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/generate_profile_docs.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_retry_handoff.ps1 -DryRun -PromptId <prompt-id>
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_seed_handoff.ps1 -DryRun -PlanFile reports/seed_plans/<plan-file>.md
 ```
 
 Live seed handoff defaults to:
@@ -69,21 +76,21 @@ Live seed handoff defaults to:
 
 Validation writes to:
 
-- `harness/reports/preflight_report.md`
-- `harness/reports/latest_report.md`
-- `harness/reports/test_results/`
-- `harness/reports/logs/`
+- `reports/preflight_report.md`
+- `reports/latest_report.md`
+- `reports/test_results/`
+- `reports/logs/`
 
 Handoff writes to:
 
-- `harness/reports/retry_prompts/`
-- `harness/reports/seed_plans/`
-- `harness/reports/dispatch_packets/`
-- `harness/reports/agent_runs/`
-- `harness/reports/dispatch_log.md`
-- `harness/reports/seed_dispatch_log.md`
-- `harness/reports/assignment_log.md`
-- `harness/reports/live_dispatch_log.md`
+- `reports/retry_prompts/`
+- `reports/seed_plans/`
+- `reports/dispatch_packets/`
+- `reports/agent_runs/`
+- `reports/dispatch_log.md`
+- `reports/seed_dispatch_log.md`
+- `reports/assignment_log.md`
+- `reports/live_dispatch_log.md`
 
 ## Assignment Flow
 
@@ -106,7 +113,7 @@ Initial multi-owner implementation can be seeded from a `manager-main` plan file
 - assignment state transitions must not delete the source file before the target is safely written
 - UTF-8 without BOM is the default file encoding for harness-generated files
 - stale `in_progress` assignments without an active invoke lock are recovered back to `inbox`
-- live worker execution expects an assignment-specific feature branch and uses an isolated worktree under `harness/state/worktrees`
+- live worker execution expects an assignment-specific feature branch and uses an isolated worktree under `state/worktrees`
 - serial seed handoff still dispatches one assignment at a time, but each live run now uses its own isolated worktree instead of the shared repository root
 - live seed handoff can keep going after worker failure by requeueing the failed assignment until `MaxWorkerAttempts` is reached
 - automatic git advance stops at a requested main approval; it does not approve or merge `main`
@@ -116,7 +123,7 @@ Initial multi-owner implementation can be seeded from a `manager-main` plan file
 Install local Git enforcement before commit, push, or merge:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File harness/scripts/install_git_hooks.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install_git_hooks.ps1
 ```
 
 Required gate flow:
@@ -124,23 +131,23 @@ Required gate flow:
 1. On `codex/<owner>/<task>`, seal the candidate tree and run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File harness/scripts/run_git_gate.ps1 -Stage feature
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_git_gate.ps1 -Stage feature
 ```
 
 2. Before promoting into `dev`, run the integration gate and record the promotion:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File harness/scripts/run_git_gate.ps1 -Stage integration
-powershell -ExecutionPolicy Bypass -File harness/scripts/authorize_branch_promotion.ps1 -SourceBranch <feature-branch> -TargetBranch dev
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_git_gate.ps1 -Stage integration
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/authorize_branch_promotion.ps1 -SourceBranch <feature-branch> -TargetBranch dev
 ```
 
 3. On `codex/test/<candidate>`, run the final gate and approval flow:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File harness/scripts/run_git_gate.ps1 -Stage final
-powershell -ExecutionPolicy Bypass -File harness/scripts/request_main_merge_approval.ps1 -SourceBranch <test-branch>
-powershell -ExecutionPolicy Bypass -File harness/scripts/set_main_merge_approval.ps1 -ApprovalId <approval-id> -Status approved -Approver <name>
-powershell -ExecutionPolicy Bypass -File harness/scripts/authorize_branch_promotion.ps1 -SourceBranch <test-branch> -TargetBranch main -ApprovalId <approval-id>
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_git_gate.ps1 -Stage final
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/request_main_merge_approval.ps1 -SourceBranch <test-branch>
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/set_main_merge_approval.ps1 -ApprovalId <approval-id> -Status approved -Approver <name>
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/authorize_branch_promotion.ps1 -SourceBranch <test-branch> -TargetBranch main -ApprovalId <approval-id>
 ```
 
 Protected branches reject direct commits. The only exception is the first bootstrap commit on `main`, which requires `run_git_gate.ps1 -Stage bootstrap` and an approved bootstrap request before push.

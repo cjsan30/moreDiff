@@ -9,7 +9,7 @@ $ErrorActionPreference = "Stop"
 
 $rootDir = Get-HarnessRoot -ScriptDirectory $PSScriptRoot
 $assignmentLog = Get-HarnessConfiguredPath -RootDir $rootDir -Name "assignment_log" -FallbackRelativePath "harness/reports/assignment_log.md"
-$lockRoot = Join-Path $rootDir "harness\state\locks"
+$lockRoot = Get-HarnessLockRoot -RootDir $rootDir
 $ownerDirs = Get-AssignmentDirectories -RootDir $rootDir -Owner $Agent
 
 if (-not (Test-Path -LiteralPath $assignmentLog)) {

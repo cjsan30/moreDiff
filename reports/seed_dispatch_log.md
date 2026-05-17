@@ -1,3 +1,49 @@
 # seed_dispatch_log.md
 
 ## Entries
+- time: 2026-05-16 21:20:21
+  - source: seed_plan
+  - plan: reports/seed_plans/multibranch_compare_mvp_seed.md
+  - plan_id: multibranch-compare-mvp
+  - owner: agent-data
+  - title: github-session-foundation
+  - action: created
+  - assignment_id: multibranch-compare-mvp__01__github-session-foundation
+  - assignment: assignments/agent-data/inbox/multibranch-compare-mvp__01__github-session-foundation.md
+  - packet: reports/dispatch_packets/multibranch-compare-mvp__01__github-session-foundation.md- time: 2026-05-16 21:30:12
+  - source: seed_plan
+  - plan: reports/seed_plans/multibranch_compare_mvp_seed.md
+  - plan_id: multibranch-compare-mvp
+  - owner: agent-domain
+  - title: compare-session-rules
+  - action: created
+  - assignment_id: multibranch-compare-mvp__02__compare-session-rules
+  - assignment: assignments/agent-domain/inbox/multibranch-compare-mvp__02__compare-session-rules.md
+  - packet: reports/dispatch_packets/multibranch-compare-mvp__02__compare-session-rules.md- time: 2026-05-16 21:30:13
+  - source: seed_plan
+  - plan: reports/seed_plans/multibranch_compare_mvp_seed.md
+  - plan_id: multibranch-compare-mvp
+  - owner: agent-ui
+  - title: readonly-compare-workspace
+  - action: created
+  - assignment_id: multibranch-compare-mvp__03__readonly-compare-workspace
+  - assignment: assignments/agent-ui/inbox/multibranch-compare-mvp__03__readonly-compare-workspace.md
+  - packet: reports/dispatch_packets/multibranch-compare-mvp__03__readonly-compare-workspace.md- time: 2026-05-16 21:30:14
+  - source: seed_plan
+  - plan: reports/seed_plans/multibranch_compare_mvp_seed.md
+  - plan_id: multibranch-compare-mvp
+  - owner: agent-runtime
+  - title: web-session-bootstrap
+  - action: created
+  - assignment_id: multibranch-compare-mvp__04__web-session-bootstrap
+  - assignment: assignments/agent-runtime/inbox/multibranch-compare-mvp__04__web-session-bootstrap.md
+  - packet: reports/dispatch_packets/multibranch-compare-mvp__04__web-session-bootstrap.md- time: 2026-05-16 21:30:15
+  - source: seed_plan
+  - plan: reports/seed_plans/multibranch_compare_mvp_seed.md
+  - plan_id: multibranch-compare-mvp
+  - owner: agent-tests
+  - title: mvp-regression-fixtures
+  - action: created
+  - assignment_id: multibranch-compare-mvp__05__mvp-regression-fixtures
+  - assignment: assignments/agent-tests/inbox/multibranch-compare-mvp__05__mvp-regression-fixtures.md
+  - packet: reports/dispatch_packets/multibranch-compare-mvp__05__mvp-regression-fixtures.md

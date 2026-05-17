@@ -8,7 +8,10 @@ export async function POST(request: Request) {
     const body = (await request.json()) as {
       token?: string;
       repoUrl?: string;
+      baseBranch?: string;
       branch?: string;
+      compareBranches?: string[];
+      expectedHeadSha?: string;
       path?: string;
       content?: string;
       message?: string;
@@ -17,7 +20,10 @@ export async function POST(request: Request) {
     await saveBranchFileToGitHub({
       token: body.token ?? "",
       repoUrl: body.repoUrl ?? "",
+      baseBranch: body.baseBranch ?? "",
       branch: body.branch ?? "",
+      compareBranches: body.compareBranches ?? [],
+      expectedHeadSha: body.expectedHeadSha ?? "",
       path: body.path ?? "",
       content: body.content ?? "",
       message: body.message ?? "Update file from MoreDiff",

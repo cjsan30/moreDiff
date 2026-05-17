@@ -6,9 +6,17 @@ if [ "${1:-}" = "--skip-retry-prompt" ]; then
     SKIP_RETRY_PROMPT=1
 fi
 
-ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-LOG_DIR="$ROOT_DIR/harness/reports/logs"
-LATEST_REPORT="$ROOT_DIR/harness/reports/latest_report.md"
+ROOT_DIR="$(bash "$(dirname "$0")/detect_root.sh")"
+if [ -f "$ROOT_DIR/scripts/run_build.sh" ]; then
+    SCRIPT_PREFIX="scripts"
+    REPORT_PREFIX="reports"
+else
+    SCRIPT_PREFIX="harness/scripts"
+    REPORT_PREFIX="harness/reports"
+fi
+
+LOG_DIR="$ROOT_DIR/$REPORT_PREFIX/logs"
+LATEST_REPORT="$ROOT_DIR/$REPORT_PREFIX/latest_report.md"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 
 mkdir -p "$LOG_DIR"
@@ -57,7 +65,7 @@ classify_failure() {
     fi
 }
 
-if ! run_step "build" "bash harness/scripts/run_build.sh" "$BUILD_LOG"; then
+if ! run_step "build" "bash $SCRIPT_PREFIX/run_build.sh" "$BUILD_LOG"; then
     BUILD_STATUS="fail"
     OVERALL_STATUS="fail"
     FAILURE_MODULE="build"
@@ -65,21 +73,21 @@ if ! run_step "build" "bash harness/scripts/run_build.sh" "$BUILD_LOG"; then
     NEXT_TASK="fix build failure and reconcile interfaces"
     classify_failure "$BUILD_LOG"
 else
-    if ! run_step "unit" "bash harness/scripts/run_unit.sh" "$UNIT_LOG"; then
+    if ! run_step "unit" "bash $SCRIPT_PREFIX/run_unit.sh" "$UNIT_LOG"; then
         UNIT_STATUS="fail"
         OVERALL_STATUS="fail"
         FAILURE_MODULE="tests/unit"
         NEXT_OWNER="agent-tests"
         NEXT_TASK="fix or add unit coverage for failing behavior"
         classify_failure "$UNIT_LOG"
-    elif ! run_step "integration" "bash harness/scripts/run_integration.sh" "$INTEGRATION_LOG"; then
+    elif ! run_step "integration" "bash $SCRIPT_PREFIX/run_integration.sh" "$INTEGRATION_LOG"; then
         INTEGRATION_STATUS="fail"
         OVERALL_STATUS="fail"
         FAILURE_MODULE="tests/integration"
         NEXT_OWNER="manager-main"
         NEXT_TASK="trace integration failure and reassign affected module"
         classify_failure "$INTEGRATION_LOG"
-    elif ! run_step "benchmark" "bash harness/scripts/run_benchmark_smoke.sh" "$BENCH_LOG"; then
+    elif ! run_step "benchmark" "bash $SCRIPT_PREFIX/run_benchmark_smoke.sh" "$BENCH_LOG"; then
         BENCHMARK_STATUS="fail"
         OVERALL_STATUS="fail"
         FAILURE_MODULE="benchmark-smoke"
@@ -106,10 +114,10 @@ cat >"$LATEST_REPORT" <<EOF
 
 ## Logs
 
-- build: harness/reports/logs/$(basename "$BUILD_LOG")
-- unit: harness/reports/logs/$(basename "$UNIT_LOG")
-- integration: harness/reports/logs/$(basename "$INTEGRATION_LOG")
-- benchmark_smoke: harness/reports/logs/$(basename "$BENCH_LOG")
+- build: $REPORT_PREFIX/logs/$(basename "$BUILD_LOG")
+- unit: $REPORT_PREFIX/logs/$(basename "$UNIT_LOG")
+- integration: $REPORT_PREFIX/logs/$(basename "$INTEGRATION_LOG")
+- benchmark_smoke: $REPORT_PREFIX/logs/$(basename "$BENCH_LOG")
 
 ## Failures
 
@@ -124,7 +132,7 @@ EOF
 
 if [ "$OVERALL_STATUS" != "pass" ]; then
     if [ "$SKIP_RETRY_PROMPT" -eq 0 ]; then
-        if RETRY_OUTPUT="$(bash harness/scripts/generate_retry_prompt.sh 2>&1)"; then
+        if RETRY_OUTPUT="$(bash $SCRIPT_PREFIX/generate_retry_prompt.sh 2>&1)"; then
             RETRY_PROMPT_STATUS="generated"
             RETRY_PROMPT_DETAIL="$(printf '%s' "$RETRY_OUTPUT" | tr '\r\n' ' ' | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
         else

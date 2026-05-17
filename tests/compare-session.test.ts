@@ -91,4 +91,50 @@ describe("compare session rules", () => {
 
     expect(session.overlapFiles).toEqual(["src/app.ts"]);
   });
+
+  it("reports overlapping hunk regions when patches touch the same line range", () => {
+    const session = createCompareSession({
+      repository: { owner: "acme", name: "repo" },
+      baseBranch: "main",
+      branches: [
+        {
+          name: "feature/a",
+          headSha: "1",
+          files: [
+            {
+              path: "src/app.ts",
+              status: "modified",
+              additions: 3,
+              deletions: 1,
+              patch: "@@ -10,4 +10,6 @@\n-old\n+new",
+              content: "a",
+            },
+          ],
+        },
+        {
+          name: "feature/b",
+          headSha: "2",
+          files: [
+            {
+              path: "src/app.ts",
+              status: "modified",
+              additions: 2,
+              deletions: 1,
+              patch: "@@ -12,3 +12,4 @@\n-old\n+new",
+              content: "b",
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(session.hunkOverlaps).toEqual([
+      {
+        path: "src/app.ts",
+        startLine: 12,
+        endLine: 15,
+        branches: ["feature/a", "feature/b"],
+      },
+    ]);
+  });
 });

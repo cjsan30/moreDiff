@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
 set -u
 
-ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-LATEST_REPORT="$ROOT_DIR/harness/reports/latest_report.md"
-TEMPLATE_FILE="$ROOT_DIR/harness/reports/retry_prompt_template.md"
-OUTPUT_DIR="$ROOT_DIR/harness/reports/retry_prompts"
+ROOT_DIR="$(bash "$(dirname "$0")/detect_root.sh")"
+if [ -d "$ROOT_DIR/reports" ]; then
+    REPORT_PREFIX="reports"
+else
+    REPORT_PREFIX="harness/reports"
+fi
+
+LATEST_REPORT="$ROOT_DIR/$REPORT_PREFIX/latest_report.md"
+TEMPLATE_FILE="$ROOT_DIR/$REPORT_PREFIX/retry_prompt_template.md"
+OUTPUT_DIR="$ROOT_DIR/$REPORT_PREFIX/retry_prompts"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 
 mkdir -p "$OUTPUT_DIR"
@@ -68,7 +74,11 @@ case "$NEXT_OWNER" in
         VALIDATION="make unit && make integration"
         ;;
     manager-harness)
-        VALIDATION="bash harness/scripts/run_harness_cycle.sh --skip-retry-prompt"
+        if [ -f "$ROOT_DIR/scripts/run_harness_cycle.sh" ]; then
+            VALIDATION="bash scripts/run_harness_cycle.sh --skip-retry-prompt"
+        else
+            VALIDATION="bash harness/scripts/run_harness_cycle.sh --skip-retry-prompt"
+        fi
         ;;
     *)
         VALIDATION="make test"
@@ -90,7 +100,7 @@ cat >"$OUTPUT_FILE" <<EOF
 
 ## Affected Area
 
-- files: inspect harness/reports/latest_report.md and related logs
+- files: inspect $REPORT_PREFIX/latest_report.md and related logs
 - module: $FAILURE_MODULE
 
 ## What Failed

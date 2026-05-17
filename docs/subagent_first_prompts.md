@@ -10,7 +10,6 @@ All workers should read:
 - `docs/requirements.md`
 - `docs/subagent_plan.md`
 - `docs/subagent_first_prompts.md`
-- `harness/AGENT.md`
 - the owned folder `AGENT.md`, when present
 
 ## agent-runtime
@@ -23,7 +22,6 @@ Read first:
 - docs/requirements.md
 - docs/subagent_plan.md
 - docs/subagent_first_prompts.md
-- harness/AGENT.md
 - app/AGENT.md, if present
 
 Goal:
@@ -58,7 +56,6 @@ Read first:
 - docs/requirements.md
 - docs/subagent_plan.md
 - docs/subagent_first_prompts.md
-- harness/AGENT.md
 - src/domain/AGENT.md, if present
 
 Goal:
@@ -93,7 +90,6 @@ Read first:
 - docs/requirements.md
 - docs/subagent_plan.md
 - docs/subagent_first_prompts.md
-- harness/AGENT.md
 - src/data/AGENT.md, if present
 
 Goal:
@@ -128,7 +124,6 @@ Read first:
 - docs/requirements.md
 - docs/subagent_plan.md
 - docs/subagent_first_prompts.md
-- harness/AGENT.md
 - src/ui/AGENT.md, if present
 
 Goal:
@@ -165,7 +160,6 @@ Read first:
 - docs/requirements.md
 - docs/subagent_plan.md
 - docs/subagent_first_prompts.md
-- harness/AGENT.md
 - tests/AGENT.md, if present
 
 Goal:
@@ -199,9 +193,8 @@ Read first:
 - docs/requirements.md
 - docs/subagent_plan.md
 - docs/subagent_first_prompts.md
-- harness/AGENT.md
-- harness/project/prompts/manager_main.md
-- harness/project/prompts/manager_main_seed.md
+- project/prompts/manager_main.md
+- project/prompts/manager_main_seed.md
 
 Role:
 - integrate owner outputs
@@ -210,9 +203,9 @@ Role:
 - keep the product aligned with the requirement that editing and saving are part of the MVP
 
 When delegating through the harness:
-- write a seed plan under `harness/reports/seed_plans/`
-- use the format in `harness/project/prompts/manager_main_seed.md`
-- run `powershell -ExecutionPolicy Bypass -File harness/scripts/run_seed_handoff.ps1 -DryRun -PlanFile <plan-file>` first
+- write a seed plan under `reports/seed_plans/`
+- use the format in `project/prompts/manager_main_seed.md`
+- run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_seed_handoff.ps1 -DryRun -PlanFile <plan-file>` first
 ```
 
 ## manager-harness
@@ -225,22 +218,21 @@ Read first:
 - docs/requirements.md
 - docs/subagent_plan.md
 - docs/subagent_first_prompts.md
-- harness/AGENT.md
-- harness/project/prompts/manager_harness.md
-- harness/configs/retry_dispatch_policy.md
-- harness/configs/git_policy.md
+- project/prompts/manager_harness.md
+- configs/retry_dispatch_policy.md
+- configs/git_policy.md
 
 Goal:
 - keep preflight, full-cycle, retry, assignment, handoff, and Git gates operational
 - classify failures and route them to the right owner
 
 Owned area:
-- harness/*
+- scripts, configs, project, assignments, reports, and state
 
 Canonical commands:
-- powershell -ExecutionPolicy Bypass -File harness/scripts/run_harness_preflight.ps1
-- powershell -ExecutionPolicy Bypass -File harness/scripts/run_harness_cycle.ps1
-- powershell -ExecutionPolicy Bypass -File harness/scripts/run_retry_handoff.ps1 -DryRun
+- powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_harness_preflight.ps1
+- powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_harness_cycle.ps1
+- powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_retry_handoff.ps1 -DryRun
 
 When done, report:
 - commands run

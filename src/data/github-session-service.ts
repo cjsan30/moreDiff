@@ -11,20 +11,37 @@ import { GitHubClient } from "@/src/github/client";
 
 export async function validatePatConnection(input: {
   token: string;
-  repoUrl: string;
+  repoUrl?: string;
 }) {
   const token = assertPatToken(input.token);
-  const repositoryRef = parseGitHubRepositoryUrl(input.repoUrl);
   const client = new GitHubClient(token);
+  const repoUrl = input.repoUrl?.trim() ?? "";
+  const repositoryRef = repoUrl ? parseGitHubRepositoryUrl(repoUrl) : null;
 
-  const [viewer, repository, branches] = await Promise.all([
+  if (!repositoryRef) {
+    const [viewer, repositories] = await Promise.all([
+      client.getViewer(),
+      client.listRepositories(),
+    ]);
+
+    return {
+      viewerLogin: viewer.login,
+      repositories,
+      repository: null,
+      branches: [],
+    };
+  }
+
+  const [viewer, repositories, repository, branches] = await Promise.all([
     client.getViewer(),
+    client.listRepositories(),
     client.getRepository(repositoryRef),
     client.listBranches(repositoryRef),
   ]);
 
   return {
     viewerLogin: viewer.login,
+    repositories,
     repository,
     branches: branches.slice(0, 20),
   };
@@ -63,7 +80,10 @@ export async function buildCompareSessionFromGitHub(input: {
 export async function saveBranchFileToGitHub(input: {
   token: string;
   repoUrl: string;
+  baseBranch: string;
   branch: string;
+  compareBranches: string[];
+  expectedHeadSha: string;
   path: string;
   content: string;
   message: string;
@@ -71,11 +91,19 @@ export async function saveBranchFileToGitHub(input: {
   const token = assertPatToken(input.token);
   const repositoryRef = parseGitHubRepositoryUrl(input.repoUrl);
   validateSaveBranchFileInput({
+    baseBranch: input.baseBranch,
     branch: input.branch,
+    compareBranches: input.compareBranches,
+    expectedHeadSha: input.expectedHeadSha,
     path: input.path,
     message: input.message,
   });
   const client = new GitHubClient(token);
+  const currentHead = await client.getBranchHead(repositoryRef, input.branch);
+  if (currentHead.headSha !== input.expectedHeadSha) {
+    throw new Error("branch head changed; reload compare session before saving");
+  }
+
   const existingFile = await client.getFileContent(
     repositoryRef,
     input.branch,

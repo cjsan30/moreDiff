@@ -24,6 +24,24 @@ interface ValidationResult {
     name: string;
     headSha: string;
   }>;
+  repositories: RepositoryOption[];
+}
+
+interface ConnectionProbeResult {
+  viewerLogin: string;
+  repository: ValidationResult["repository"] | null;
+  branches: ValidationResult["branches"];
+  repositories: RepositoryOption[];
+  error?: string;
+}
+
+interface RepositoryOption {
+  owner: string;
+  name: string;
+  fullName: string;
+  url: string;
+  isPrivate: boolean;
+  defaultBranch: string;
 }
 
 export function PatConnectionForm() {
@@ -35,7 +53,12 @@ export function PatConnectionForm() {
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingRepositories, setIsLoadingRepositories] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
+  const [loadedViewerLogin, setLoadedViewerLogin] = useState("");
+  const [repositoryOptions, setRepositoryOptions] = useState<RepositoryOption[]>(
+    [],
+  );
   const [recentSessions, setRecentSessions] = useState<RecentCompareSession[]>(
     [],
   );
@@ -68,6 +91,43 @@ export function PatConnectionForm() {
     setPendingRecentSessionId("");
   }, [pendingRecentSessionId, recentSessions, result]);
 
+  async function handleLoadRepositories() {
+    setIsLoadingRepositories(true);
+    setError("");
+    setResult(null);
+
+    try {
+      const response = await fetch("/api/github/validate-pat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token,
+        }),
+      });
+
+      const payload = (await response.json()) as ConnectionProbeResult;
+      if (!response.ok) {
+        throw new Error(payload.error ?? "failed to load repositories");
+      }
+
+      setLoadedViewerLogin(payload.viewerLogin);
+      setRepositoryOptions(payload.repositories);
+      if (!repoUrl.trim() && payload.repositories[0]) {
+        setRepoUrl(payload.repositories[0].url);
+      }
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "repository loading failed",
+      );
+    } finally {
+      setIsLoadingRepositories(false);
+    }
+  }
+
   async function handleValidate() {
     setIsSubmitting(true);
     setError("");
@@ -85,15 +145,24 @@ export function PatConnectionForm() {
         }),
       });
 
-      const payload = (await response.json()) as ValidationResult & {
-        error?: string;
-      };
+      const payload = (await response.json()) as ConnectionProbeResult;
 
       if (!response.ok) {
         throw new Error(payload.error ?? "failed to validate token");
       }
+      if (!payload.repository) {
+        throw new Error("select a repository before validating access");
+      }
+      const validationResult: ValidationResult = {
+        viewerLogin: payload.viewerLogin,
+        repository: payload.repository,
+        branches: payload.branches,
+        repositories: payload.repositories,
+      };
 
-      setResult(payload);
+      setLoadedViewerLogin(payload.viewerLogin);
+      setRepositoryOptions(payload.repositories);
+      setResult(validationResult);
       const pendingSession = recentSessions.find(
         (session) =>
           session.id === pendingRecentSessionId ||
@@ -102,13 +171,13 @@ export function PatConnectionForm() {
 
       if (pendingSession) {
         applySessionShape(
-          payload,
+          validationResult,
           pendingSession,
           setBaseBranch,
           setSelectedBranches,
         );
       } else {
-        applySessionShape(payload, null, setBaseBranch, setSelectedBranches);
+        applySessionShape(validationResult, null, setBaseBranch, setSelectedBranches);
       }
     } catch (caughtError) {
       setError(
@@ -248,21 +317,60 @@ export function PatConnectionForm() {
       ) : null}
 
       <label className="formField">
-        <span>Repository URL</span>
-        <input
-          placeholder="https://github.com/owner/repository"
-          value={repoUrl}
-          onChange={(event) => setRepoUrl(event.target.value)}
-        />
-      </label>
-
-      <label className="formField">
         <span>Fine-grained PAT</span>
         <input
           placeholder="github_pat_..."
           type="password"
           value={token}
           onChange={(event) => setToken(event.target.value)}
+        />
+      </label>
+
+      <div className="actionsRow">
+        <button
+          type="button"
+          onClick={handleLoadRepositories}
+          disabled={isLoadingRepositories}
+        >
+          {isLoadingRepositories ? "Loading repositories..." : "Load repositories"}
+        </button>
+      </div>
+
+      {loadedViewerLogin ? (
+        <p className="hintText">
+          Repository access loaded for <strong>{loadedViewerLogin}</strong>.
+        </p>
+      ) : null}
+
+      {repositoryOptions.length > 0 ? (
+        <label className="formField">
+          <span>Accessible repositories</span>
+          <select
+            value={repoUrl}
+            onChange={(event) => {
+              setRepoUrl(event.target.value);
+              setResult(null);
+            }}
+          >
+            {repositoryOptions.map((repository) => (
+              <option key={repository.fullName} value={repository.url}>
+                {repository.fullName}
+                {repository.isPrivate ? " (private)" : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+
+      <label className="formField">
+        <span>Repository URL</span>
+        <input
+          placeholder="https://github.com/owner/repository"
+          value={repoUrl}
+          onChange={(event) => {
+            setRepoUrl(event.target.value);
+            setResult(null);
+          }}
         />
       </label>
 

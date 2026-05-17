@@ -311,6 +311,20 @@ function Get-HarnessConfiguredInteger {
     return $Fallback
 }
 
+function Get-HarnessLockRoot {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RootDir
+    )
+
+    $standaloneProfilePath = Join-Path $RootDir "project\configs\project_profile.json"
+    if (Test-Path -LiteralPath $standaloneProfilePath) {
+        return Join-Path $RootDir "state\locks"
+    }
+
+    return Join-Path $RootDir "harness\state\locks"
+}
+
 function Get-RelativeProjectPath {
     param(
         [Parameter(Mandatory = $true)]
@@ -642,7 +656,7 @@ function Get-AssignmentInvokeLockPath {
         [string]$AssignmentId
     )
 
-    return Join-Path $RootDir ("harness\state\locks\invoke_" + $AssignmentId)
+    return Join-Path (Get-HarnessLockRoot -RootDir $RootDir) ("invoke_" + $AssignmentId)
 }
 
 function Restore-StaleInProgressAssignments {

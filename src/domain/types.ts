@@ -35,7 +35,15 @@ export interface FileMatrixRow {
   }>;
 }
 
+export interface HunkOverlap {
+  path: string;
+  startLine: number;
+  endLine: number;
+  branches: string[];
+}
+
 export interface CompareSessionViewModel extends CompareSessionInput {
   fileMatrix: FileMatrixRow[];
   overlapFiles: string[];
+  hunkOverlaps: HunkOverlap[];
 }

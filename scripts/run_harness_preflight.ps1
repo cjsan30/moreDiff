@@ -48,6 +48,42 @@ function Test-IsSelfReferentialGitGateAuditIssue {
     }
 }
 
+function Test-IsPassingStagedFeatureGateAuditIssue {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RootDirectory,
+        [Parameter(Mandatory = $true)]
+        $State,
+        [Parameter(Mandatory = $true)]
+        [string]$BranchName,
+        [Parameter(Mandatory = $true)]
+        [string]$Issue,
+        [Parameter(Mandatory = $true)]
+        [string]$BranchKind
+    )
+
+    if ($BranchKind -ne "feature" -or $Issue -notlike "*missing a passing feature gate*") {
+        return $false
+    }
+
+    try {
+        $candidateStatus = Assert-SealedGitCandidate -RootDir $RootDirectory -RequireStagedChanges
+        if (-not $candidateStatus.HasStagedChanges) {
+            return $false
+        }
+
+        $indexTree = Get-GitIndexTree -RootDir $RootDirectory
+        if ([string]::IsNullOrWhiteSpace($indexTree)) {
+            return $false
+        }
+
+        $validation = Get-LatestGitValidation -State $State -Branch $BranchName -Stage "feature" -Status "pass" -TreeHash $indexTree
+        return ($null -ne $validation)
+    } catch {
+        return $false
+    }
+}
+
 function Test-WriteTarget {
     param(
         [Parameter(Mandatory = $true)]
@@ -368,9 +404,13 @@ if ($issues.Count -eq 0) {
             $currentBranch = Get-GitCurrentBranch -RootDir $rootDir
             $currentBranchInfo = Get-GitBranchDescriptor -RootDir $rootDir -BranchName $currentBranch
             $activeGateStage = Get-ActiveGitGateStage
-            $auditIssues = @(Get-GitBranchAuditIssues -RootDir $rootDir -State (Get-GitWorkflowState -RootDir $rootDir) -BranchName $currentBranch)
+            $gitWorkflowState = Get-GitWorkflowState -RootDir $rootDir
+            $auditIssues = @(Get-GitBranchAuditIssues -RootDir $rootDir -State $gitWorkflowState -BranchName $currentBranch)
             foreach ($auditIssue in $auditIssues) {
                 if (Test-IsSelfReferentialGitGateAuditIssue -Issue $auditIssue -BranchKind $currentBranchInfo.Kind -ActiveGateStage $activeGateStage) {
+                    continue
+                }
+                if (Test-IsPassingStagedFeatureGateAuditIssue -RootDirectory $rootDir -State $gitWorkflowState -BranchName $currentBranch -Issue $auditIssue -BranchKind $currentBranchInfo.Kind) {
                     continue
                 }
                 Add-Issue ("git workflow audit: " + $auditIssue)

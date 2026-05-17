@@ -83,7 +83,7 @@ See `harness/configs/harness_checklist.md` for the detailed checklist.
 
 Start here depending on the task:
 
-- current harness status: `../docs/current_state_summary.md`
+- current harness status: `docs/current_state_summary.md`
 - current validation state: `reports/preflight_report.md`, `reports/latest_report.md`, `reports/test_results/`
 - project retargeting: `../docs/project_porting_template.md`, `project/configs/project_profile.json`
 - script usage: `scripts/README.md`

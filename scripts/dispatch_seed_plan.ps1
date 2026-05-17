@@ -21,7 +21,7 @@ $dispatchLog = Get-HarnessConfiguredPath -RootDir $rootDir -Name "dispatch_log" 
 $assignmentsRoot = Get-HarnessConfiguredPath -RootDir $rootDir -Name "assignments_root" -FallbackRelativePath "harness/assignments"
 $dispatchPackets = Get-HarnessConfiguredPath -RootDir $rootDir -Name "dispatch_packets" -FallbackRelativePath "harness/reports/dispatch_packets"
 $assignmentLog = Get-HarnessConfiguredPath -RootDir $rootDir -Name "assignment_log" -FallbackRelativePath "harness/reports/assignment_log.md"
-$lockRoot = Join-Path $rootDir "harness\state\locks"
+$lockRoot = Get-HarnessLockRoot -RootDir $rootDir
 $gitConfig = Get-GitWorkflowConfig -RootDir $rootDir
 
 if ($MaxWorkerAttempts -lt 1) {
@@ -781,7 +781,7 @@ try {
                 $notesText = "none"
             }
             $readFirstList = (($handoffContext.Read | ForEach-Object { "- $_" }) -join [Environment]::NewLine)
-            $invokeCommand = "powershell -ExecutionPolicy Bypass -File harness/scripts/invoke_assignment_codex.ps1 -Agent $($definition.Owner) -AssignmentId $assignmentId"
+            $invokeCommand = "powershell -ExecutionPolicy Bypass -File scripts/invoke_assignment_codex.ps1 -Agent $($definition.Owner) -AssignmentId $assignmentId"
             $relativeAssignmentFile = Get-RelativeProjectPath -RootDir $rootDir -AbsolutePath $assignmentFile
             $relativePacketFile = Get-RelativeProjectPath -RootDir $rootDir -AbsolutePath $packetFile
 
@@ -863,7 +863,7 @@ $acceptanceText
 
 - feature_branch: $featureBranch
 - rule: live execution must happen on the assignment feature branch, not on main, dev, or test branches
-- worktree_mode: each live assignment runs in its own isolated git worktree under harness/state/worktrees
+- worktree_mode: each live assignment runs in its own isolated git worktree under the configured assignment worktrees root
 - serial_dispatch_note: seed handoff currently dispatches one assignment at a time even though worker execution is isolated
 
 ## Send This To The Subagent

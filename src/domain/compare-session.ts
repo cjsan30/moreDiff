@@ -2,6 +2,7 @@ import type {
   CompareSessionInput,
   CompareSessionViewModel,
   FileMatrixRow,
+  HunkOverlap,
 } from "@/src/domain/types";
 
 const MIN_BRANCHES = 2;
@@ -27,11 +28,13 @@ export function createCompareSession(
   const overlapFiles = fileMatrix
     .filter((row) => row.branches.filter((branch) => branch.changed).length > 1)
     .map((row) => row.path);
+  const hunkOverlaps = buildHunkOverlaps(input);
 
   return {
     ...input,
     fileMatrix,
     overlapFiles,
+    hunkOverlaps,
   };
 }
 
@@ -110,4 +113,83 @@ function buildFileMatrix(input: CompareSessionInput): FileMatrixRow[] {
         };
       }),
     }));
+}
+
+interface ParsedHunkRange {
+  startLine: number;
+  endLine: number;
+}
+
+function buildHunkOverlaps(input: CompareSessionInput): HunkOverlap[] {
+  const overlaps = new Map<string, HunkOverlap>();
+  const paths = new Set(input.branches.flatMap((branch) => branch.files.map((file) => file.path)));
+
+  for (const path of paths) {
+    const branchRanges = input.branches
+      .map((branch) => {
+        const file = branch.files.find((candidate) => candidate.path === path);
+        return {
+          branchName: branch.name,
+          ranges: file ? parsePatchHunkRanges(file.patch) : [],
+        };
+      })
+      .filter((branch) => branch.ranges.length > 0);
+
+    for (let leftIndex = 0; leftIndex < branchRanges.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < branchRanges.length; rightIndex += 1) {
+        for (const leftRange of branchRanges[leftIndex].ranges) {
+          for (const rightRange of branchRanges[rightIndex].ranges) {
+            const startLine = Math.max(leftRange.startLine, rightRange.startLine);
+            const endLine = Math.min(leftRange.endLine, rightRange.endLine);
+            if (startLine > endLine) {
+              continue;
+            }
+
+            const branches = [
+              branchRanges[leftIndex].branchName,
+              branchRanges[rightIndex].branchName,
+            ].sort();
+            const key = `${path}:${startLine}:${endLine}:${branches.join(",")}`;
+            overlaps.set(key, {
+              path,
+              startLine,
+              endLine,
+              branches,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return [...overlaps.values()].sort((left, right) => {
+    const pathCompare = left.path.localeCompare(right.path);
+    if (pathCompare !== 0) {
+      return pathCompare;
+    }
+
+    return left.startLine - right.startLine;
+  });
+}
+
+function parsePatchHunkRanges(patch: string): ParsedHunkRange[] {
+  const hunkHeaderPattern = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/gm;
+  const ranges: ParsedHunkRange[] = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = hunkHeaderPattern.exec(patch)) !== null) {
+    const oldStart = Number.parseInt(match[1], 10);
+    const oldLines = Number.parseInt(match[2] ?? "1", 10);
+    const newStart = Number.parseInt(match[3], 10);
+    const newLines = Number.parseInt(match[4] ?? "1", 10);
+    const changedStart = newLines > 0 ? newStart : oldStart;
+    const changedLines = Math.max(newLines > 0 ? newLines : oldLines, 1);
+
+    ranges.push({
+      startLine: changedStart,
+      endLine: changedStart + changedLines - 1,
+    });
+  }
+
+  return ranges;
 }

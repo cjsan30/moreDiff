@@ -11,7 +11,7 @@ $latestReport = Get-HarnessConfiguredPath -RootDir $rootDir -Name "latest_report
 $preflightScript = Join-Path $PSScriptRoot "run_harness_preflight.ps1"
 $generateRetryPromptScript = Join-Path $PSScriptRoot "generate_retry_prompt.ps1"
 $preflightReport = Get-HarnessConfiguredPath -RootDir $rootDir -Name "preflight_report" -FallbackRelativePath "harness/reports/preflight_report.md"
-$lockRoot = Join-Path $rootDir "harness\state\locks"
+$lockRoot = Get-HarnessLockRoot -RootDir $rootDir
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
 
 Ensure-HarnessDirectory -Path $logDir

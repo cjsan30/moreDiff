@@ -86,7 +86,7 @@ $body = @"
 
 ## Affected Area
 
-- files: inspect harness/reports/latest_report.md and related logs
+- files: inspect reports/latest_report.md and related logs
 - module: $failureModule
 
 ## What Failed

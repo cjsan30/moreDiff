@@ -1,3 +1,74 @@
 # live_dispatch_log.md
 
 ## Entries
+- time: 2026-05-16 21:30:12
+  - assignment_id: multibranch-compare-mvp__01__github-session-foundation
+  - owner: agent-data
+  - mode: dry_run
+  - result: not-run
+  - feature_branch: codex/agent-data/multibranch-compare-mvp__01__github-session-foundation
+  - branch_status: live_execution_will_use_isolated_worktree
+  - summary: C:\Users\mnshell\Desktop\Jungle\morediff\harness\reports\agent_runs\multibranch-compare-mvp__01__github-session-foundation__summary.md- time: 2026-05-16 21:30:13
+  - assignment_id: multibranch-compare-mvp__02__compare-session-rules
+  - owner: agent-domain
+  - mode: dry_run
+  - result: not-run
+  - feature_branch: codex/agent-domain/multibranch-compare-mvp__02__compare-session-rules
+  - branch_status: live_execution_will_use_isolated_worktree
+  - summary: C:\Users\mnshell\Desktop\Jungle\morediff\harness\reports\agent_runs\multibranch-compare-mvp__02__compare-session-rules__summary.md- time: 2026-05-16 21:30:14
+  - assignment_id: multibranch-compare-mvp__03__readonly-compare-workspace
+  - owner: agent-ui
+  - mode: dry_run
+  - result: not-run
+  - feature_branch: codex/agent-ui/multibranch-compare-mvp__03__readonly-compare-workspace
+  - branch_status: live_execution_will_use_isolated_worktree
+  - summary: C:\Users\mnshell\Desktop\Jungle\morediff\harness\reports\agent_runs\multibranch-compare-mvp__03__readonly-compare-workspace__summary.md- time: 2026-05-16 21:30:15
+  - assignment_id: multibranch-compare-mvp__04__web-session-bootstrap
+  - owner: agent-runtime
+  - mode: dry_run
+  - result: not-run
+  - feature_branch: codex/agent-runtime/multibranch-compare-mvp__04__web-session-bootstrap
+  - branch_status: live_execution_will_use_isolated_worktree
+  - summary: C:\Users\mnshell\Desktop\Jungle\morediff\harness\reports\agent_runs\multibranch-compare-mvp__04__web-session-bootstrap__summary.md- time: 2026-05-16 21:30:16
+  - assignment_id: multibranch-compare-mvp__05__mvp-regression-fixtures
+  - owner: agent-tests
+  - mode: dry_run
+  - result: not-run
+  - feature_branch: codex/agent-tests/multibranch-compare-mvp__05__mvp-regression-fixtures
+  - branch_status: live_execution_will_use_isolated_worktree
+  - summary: C:\Users\mnshell\Desktop\Jungle\morediff\harness\reports\agent_runs\multibranch-compare-mvp__05__mvp-regression-fixtures__summary.md- time: 2026-05-16 21:59:51
+  - assignment_id: multibranch-compare-mvp__01__github-session-foundation
+  - owner: agent-data
+  - mode: dry_run
+  - result: not-run
+  - feature_branch: codex/agent-data/multibranch-compare-mvp__01__github-session-foundation
+  - branch_status: live_execution_will_use_isolated_worktree
+  - summary: C:\Users\mnshell\Desktop\Jungle\morediff\harness\reports\agent_runs\multibranch-compare-mvp__01__github-session-foundation__summary.md- time: 2026-05-16 21:59:52
+  - assignment_id: multibranch-compare-mvp__02__compare-session-rules
+  - owner: agent-domain
+  - mode: dry_run
+  - result: not-run
+  - feature_branch: codex/agent-domain/multibranch-compare-mvp__02__compare-session-rules
+  - branch_status: live_execution_will_use_isolated_worktree
+  - summary: C:\Users\mnshell\Desktop\Jungle\morediff\harness\reports\agent_runs\multibranch-compare-mvp__02__compare-session-rules__summary.md- time: 2026-05-16 21:59:54
+  - assignment_id: multibranch-compare-mvp__03__readonly-compare-workspace
+  - owner: agent-ui
+  - mode: dry_run
+  - result: not-run
+  - feature_branch: codex/agent-ui/multibranch-compare-mvp__03__readonly-compare-workspace
+  - branch_status: live_execution_will_use_isolated_worktree
+  - summary: C:\Users\mnshell\Desktop\Jungle\morediff\harness\reports\agent_runs\multibranch-compare-mvp__03__readonly-compare-workspace__summary.md- time: 2026-05-16 21:59:55
+  - assignment_id: multibranch-compare-mvp__04__web-session-bootstrap
+  - owner: agent-runtime
+  - mode: dry_run
+  - result: not-run
+  - feature_branch: codex/agent-runtime/multibranch-compare-mvp__04__web-session-bootstrap
+  - branch_status: live_execution_will_use_isolated_worktree
+  - summary: C:\Users\mnshell\Desktop\Jungle\morediff\harness\reports\agent_runs\multibranch-compare-mvp__04__web-session-bootstrap__summary.md- time: 2026-05-16 21:59:56
+  - assignment_id: multibranch-compare-mvp__05__mvp-regression-fixtures
+  - owner: agent-tests
+  - mode: dry_run
+  - result: not-run
+  - feature_branch: codex/agent-tests/multibranch-compare-mvp__05__mvp-regression-fixtures
+  - branch_status: live_execution_will_use_isolated_worktree
+  - summary: C:\Users\mnshell\Desktop\Jungle\morediff\harness\reports\agent_runs\multibranch-compare-mvp__05__mvp-regression-fixtures__summary.md

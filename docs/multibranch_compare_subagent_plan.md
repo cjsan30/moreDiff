@@ -13,13 +13,12 @@ Each worker should read:
 1. `AGENT.md`
 2. `docs/multibranch_compare_requirements.md`
 3. `docs/multibranch_compare_subagent_plan.md`
-4. `harness/AGENT.md`
 
 ## Git Rule
 
 - live work should happen on `codex/<owner>/<task>`
 - no worker edits `main`, `dev`, or `codex/test/*` directly
-- promotions still follow `harness/configs/git_policy.md`
+- promotions still follow `configs/git_policy.md`
 
 ## Owner Map
 

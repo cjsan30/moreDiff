@@ -164,7 +164,7 @@ switch ($Action) {
             $treeHash = Get-GitIndexTree -RootDir $rootDir
             $validation = Get-LatestGitValidation -State $state -Branch $branchInfo.Name -Stage "feature" -Status "pass" -TreeHash $treeHash
             if ($null -eq $validation) {
-                Deny-GitAction "feature branch commits require a passing feature gate for the exact staged tree. Run: powershell -ExecutionPolicy Bypass -File harness/scripts/run_git_gate.ps1 -Stage feature"
+                Deny-GitAction "feature branch commits require a passing feature gate for the exact staged tree. Run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_git_gate.ps1 -Stage feature"
             }
 
             exit 0
@@ -180,7 +180,7 @@ switch ($Action) {
             $treeHash = Get-GitIndexTree -RootDir $rootDir
             $validation = Get-LatestGitValidation -State $state -Branch $branchInfo.Name -Stage "bootstrap" -Status "pass" -TreeHash $treeHash
             if ($null -eq $validation) {
-                Deny-GitAction "the first protected commit requires a passing bootstrap gate for the exact staged tree. Run: powershell -ExecutionPolicy Bypass -File harness/scripts/run_git_gate.ps1 -Stage bootstrap"
+                Deny-GitAction "the first protected commit requires a passing bootstrap gate for the exact staged tree. Run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_git_gate.ps1 -Stage bootstrap"
             }
 
             exit 0

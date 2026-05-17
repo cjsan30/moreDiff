@@ -15,7 +15,7 @@ $ErrorActionPreference = "Stop"
 
 $rootDir = Get-HarnessRoot -ScriptDirectory $PSScriptRoot
 $runsDir = Get-HarnessConfiguredPath -RootDir $rootDir -Name "agent_runs" -FallbackRelativePath "harness/reports/agent_runs"
-$lockRoot = Join-Path $rootDir "harness\state\locks"
+$lockRoot = Get-HarnessLockRoot -RootDir $rootDir
 $dispatchPackets = Get-HarnessConfiguredPath -RootDir $rootDir -Name "dispatch_packets" -FallbackRelativePath "harness/reports/dispatch_packets"
 $assignmentLog = Get-HarnessConfiguredPath -RootDir $rootDir -Name "assignment_log" -FallbackRelativePath "harness/reports/assignment_log.md"
 $liveDispatchLog = Get-HarnessConfiguredPath -RootDir $rootDir -Name "live_dispatch_log" -FallbackRelativePath "harness/reports/live_dispatch_log.md"
@@ -163,9 +163,9 @@ Execution rules:
 - If you create a commit or push, follow `harness/configs/git_policy.md`.
 - If validation is expressed as multiple commands joined with `&&`, run the shell-appropriate sequential equivalent in the current environment.
 - Before finishing, if validation passes, run:
-  powershell -ExecutionPolicy Bypass -File harness/scripts/complete_assignment.ps1 -Agent $Agent -AssignmentId $AssignmentId -Result pass
+  powershell -ExecutionPolicy Bypass -File scripts/complete_assignment.ps1 -Agent $Agent -AssignmentId $AssignmentId -Result pass
 - If you are blocked or validation fails, run:
-  powershell -ExecutionPolicy Bypass -File harness/scripts/complete_assignment.ps1 -Agent $Agent -AssignmentId $AssignmentId -Result fail
+  powershell -ExecutionPolicy Bypass -File scripts/complete_assignment.ps1 -Agent $Agent -AssignmentId $AssignmentId -Result fail
 - In your final message, briefly summarize changed files, validation run, and remaining risks.
 "@
     Write-Utf8File -Path $promptFile -Content $prompt

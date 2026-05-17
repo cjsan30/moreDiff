@@ -16,7 +16,7 @@ $retryDir = Get-HarnessConfiguredPath -RootDir $rootDir -Name "retry_prompts" -F
 $dispatchLog = Get-HarnessConfiguredPath -RootDir $rootDir -Name "dispatch_log" -FallbackRelativePath "harness/reports/dispatch_log.md"
 $assignmentsRoot = Get-HarnessConfiguredPath -RootDir $rootDir -Name "assignments_root" -FallbackRelativePath "harness/assignments"
 $dispatchPackets = Get-HarnessConfiguredPath -RootDir $rootDir -Name "dispatch_packets" -FallbackRelativePath "harness/reports/dispatch_packets"
-$lockRoot = Join-Path $rootDir "harness\state\locks"
+$lockRoot = Get-HarnessLockRoot -RootDir $rootDir
 $latestReport = Get-HarnessConfiguredPath -RootDir $rootDir -Name "latest_report" -FallbackRelativePath "harness/reports/latest_report.md"
 
 if (-not (Test-Path -LiteralPath $retryDir)) {
@@ -191,7 +191,7 @@ try {
     $workArea = $handoffContext.WorkArea
     $readFirstList = (($handoffContext.Read | ForEach-Object { "- $_" }) -join [Environment]::NewLine)
     $featureBranch = Get-GitExpectedAssignmentBranch -RootDir $rootDir -Owner $owner -AssignmentId $assignmentId
-    $invokeCommand = "powershell -ExecutionPolicy Bypass -File harness/scripts/invoke_assignment_codex.ps1 -Agent $owner -AssignmentId $assignmentId"
+    $invokeCommand = "powershell -ExecutionPolicy Bypass -File scripts/invoke_assignment_codex.ps1 -Agent $owner -AssignmentId $assignmentId"
 
     $assignmentBody = @"
 # Assignment
@@ -253,7 +253,7 @@ $readFirstList
 
 - feature_branch: $featureBranch
 - rule: live execution must happen on the assignment feature branch, not on main, dev, or test branches
-- worktree_mode: each live assignment runs in its own isolated git worktree under harness/state/worktrees
+- worktree_mode: each live assignment runs in its own isolated git worktree under the configured assignment worktrees root
 
 ## Send This To The Subagent
 

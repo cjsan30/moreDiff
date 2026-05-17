@@ -13,8 +13,7 @@
       "AGENT.md",
       "docs/requirements.md",
       "docs/subagent_plan.md",
-      "docs/subagent_first_prompts.md",
-      "harness/AGENT.md"
+      "docs/subagent_first_prompts.md"
     ],
     "success_criteria": [
       "support one base branch plus two to six compare branches in a single session",
@@ -23,12 +22,12 @@
     ]
   },
   "commands": {
-    "build": "npm run build",
-    "unit": "npm test",
-    "integration": "npm run test:integration",
-    "benchmark_smoke": "npm run test:smoke",
-    "release": "npm run build",
-    "full_cycle": "powershell -ExecutionPolicy Bypass -File harness/scripts/run_harness_cycle.ps1"
+    "build": "bash scripts/run_build.sh",
+    "unit": "bash scripts/run_unit.sh",
+    "integration": "bash scripts/run_integration.sh",
+    "benchmark_smoke": "bash scripts/run_benchmark_smoke.sh",
+    "release": "bash scripts/run_build.sh",
+    "full_cycle": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_harness_cycle.ps1"
   },
   "owners": {
     "agent-runtime": {
@@ -37,11 +36,10 @@
         "docs/requirements.md",
         "docs/subagent_plan.md",
         "docs/subagent_first_prompts.md",
-        "harness/AGENT.md",
         "app/AGENT.md"
       ],
       "work_area": "app",
-      "validation": "npm test -- app",
+      "validation": "bash scripts/run_npm_test.sh -- app",
       "failure_scope": [
         "startup flow",
         "routing",
@@ -55,11 +53,10 @@
         "docs/requirements.md",
         "docs/subagent_plan.md",
         "docs/subagent_first_prompts.md",
-        "harness/AGENT.md",
         "src/domain/AGENT.md"
       ],
       "work_area": "src/domain",
-      "validation": "npm test -- compare-session",
+      "validation": "bash scripts/run_npm_test.sh -- compare-session",
       "failure_scope": [
         "session rules",
         "branch constraints",
@@ -73,11 +70,10 @@
         "docs/requirements.md",
         "docs/subagent_plan.md",
         "docs/subagent_first_prompts.md",
-        "harness/AGENT.md",
         "src/data/AGENT.md"
       ],
       "work_area": "src/data",
-      "validation": "npm test -- github",
+      "validation": "bash scripts/run_npm_test.sh -- github",
       "failure_scope": [
         "GitHub integration",
         "diff materialization",
@@ -91,11 +87,10 @@
         "docs/requirements.md",
         "docs/subagent_plan.md",
         "docs/subagent_first_prompts.md",
-        "harness/AGENT.md",
         "src/ui/AGENT.md"
       ],
       "work_area": "src/ui",
-      "validation": "npm test -- workspace",
+      "validation": "bash scripts/run_npm_test.sh -- workspace",
       "failure_scope": [
         "workspace layout",
         "diff rendering",
@@ -109,11 +104,10 @@
         "docs/requirements.md",
         "docs/subagent_plan.md",
         "docs/subagent_first_prompts.md",
-        "harness/AGENT.md",
         "tests/AGENT.md"
       ],
       "work_area": "tests",
-      "validation": "npm test",
+      "validation": "bash scripts/run_npm_test.sh",
       "failure_scope": [
         "regression coverage",
         "fixtures",
@@ -127,13 +121,12 @@
         "docs/requirements.md",
         "docs/subagent_plan.md",
         "docs/subagent_first_prompts.md",
-        "harness/AGENT.md",
-        "harness/project/prompts/manager_main.md",
-        "harness/project/prompts/manager_main_seed.md",
-        "harness/configs/git_policy.md"
+        "project/prompts/manager_main.md",
+        "project/prompts/manager_main_seed.md",
+        "configs/git_policy.md"
       ],
       "work_area": "project-wide",
-      "validation": "npm test",
+      "validation": "bash scripts/run_npm_test.sh",
       "failure_scope": [
         "cross-module",
         "interface reconciliation",
@@ -146,13 +139,12 @@
         "docs/requirements.md",
         "docs/subagent_plan.md",
         "docs/subagent_first_prompts.md",
-        "harness/AGENT.md",
-        "harness/project/prompts/manager_harness.md",
-        "harness/configs/git_policy.md",
-        "harness/configs/retry_dispatch_policy.md"
+        "project/prompts/manager_harness.md",
+        "configs/git_policy.md",
+        "configs/retry_dispatch_policy.md"
       ],
-      "work_area": "harness",
-      "validation": "powershell -ExecutionPolicy Bypass -File harness/scripts/run_harness_cycle.ps1 -SkipRetryPrompt",
+      "work_area": "scripts",
+      "validation": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run_harness_cycle.ps1 -SkipRetryPrompt",
       "failure_scope": [
         "tooling",
         "dispatch",
@@ -220,29 +212,29 @@
   },
   "git_workflow": {
     "hooks_path": ".githooks",
-    "state_file": "harness/state/git_workflow/state.json",
-    "reports_dir": "harness/reports/git_workflow",
-    "bootstrap_branch": "main",
+    "state_file": "state/git_workflow/state.json",
+    "reports_dir": "reports/git_workflow",
+    "bootstrap_branch": "codex/manager-main/bootstrap-morediff",
     "main_branch": "main",
     "dev_branch": "dev",
     "feature_branch_prefix": "codex/",
     "test_branch_prefix": "codex/test/"
   },
   "harness": {
-    "logs": "harness/reports/logs",
-    "latest_report": "harness/reports/latest_report.md",
-    "preflight_report": "harness/reports/preflight_report.md",
-    "test_results": "harness/reports/test_results",
-    "retry_prompts": "harness/reports/retry_prompts",
-    "seed_plans": "harness/reports/seed_plans",
-    "dispatch_packets": "harness/reports/dispatch_packets",
-    "agent_runs": "harness/reports/agent_runs",
-    "assignments_root": "harness/assignments",
-    "assignment_worktrees_root": "harness/state/worktrees",
-    "dispatch_log": "harness/reports/dispatch_log.md",
-    "seed_dispatch_log": "harness/reports/seed_dispatch_log.md",
-    "assignment_log": "harness/reports/assignment_log.md",
-    "live_dispatch_log": "harness/reports/live_dispatch_log.md",
+    "logs": "reports/logs",
+    "latest_report": "reports/latest_report.md",
+    "preflight_report": "reports/preflight_report.md",
+    "test_results": "reports/test_results",
+    "retry_prompts": "reports/retry_prompts",
+    "seed_plans": "reports/seed_plans",
+    "dispatch_packets": "reports/dispatch_packets",
+    "agent_runs": "reports/agent_runs",
+    "assignments_root": "assignments",
+    "assignment_worktrees_root": "state/worktrees",
+    "dispatch_log": "reports/dispatch_log.md",
+    "seed_dispatch_log": "reports/seed_dispatch_log.md",
+    "assignment_log": "reports/assignment_log.md",
+    "live_dispatch_log": "reports/live_dispatch_log.md",
     "assignment_stale_seconds": 7200
   }
 }

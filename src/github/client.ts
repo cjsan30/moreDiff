@@ -1,6 +1,5 @@
 import type { CompareBranch, FileStatus } from "@/src/domain/types";
 import type { GitHubRepositoryRef } from "@/src/domain/github-connection";
-import { validateSaveBranchFileInput } from "@/src/domain/save-branch-file";
 
 interface GitHubUserResponse {
   login: string;
@@ -16,8 +15,10 @@ interface GitHubBranchResponse {
 
 interface GitHubRepoResponse {
   name: string;
+  full_name?: string;
   private: boolean;
   default_branch: string;
+  html_url?: string;
   owner: {
     login: string;
   };
@@ -41,6 +42,7 @@ interface GitHubContentsResponse {
 
 export interface GitHubConnectionSummary {
   viewerLogin: string;
+  repositories: GitHubAccessibleRepository[];
   repository: {
     owner: string;
     name: string;
@@ -51,6 +53,15 @@ export interface GitHubConnectionSummary {
     name: string;
     headSha: string;
   }>;
+}
+
+export interface GitHubAccessibleRepository {
+  owner: string;
+  name: string;
+  fullName: string;
+  url: string;
+  isPrivate: boolean;
+  defaultBranch: string;
 }
 
 interface GitHubRequestErrorOptions {
@@ -92,6 +103,21 @@ export class GitHubClient {
       isPrivate: repo.private,
       defaultBranch: repo.default_branch,
     };
+  }
+
+  async listRepositories(): Promise<GitHubAccessibleRepository[]> {
+    const repositories = await this.request<GitHubRepoResponse[]>(
+      "/user/repos?per_page=100&sort=updated&affiliation=owner,collaborator,organization_member",
+    );
+
+    return repositories.map((repository) => ({
+      owner: repository.owner.login,
+      name: repository.name,
+      fullName: repository.full_name ?? `${repository.owner.login}/${repository.name}`,
+      url: repository.html_url ?? `https://github.com/${repository.owner.login}/${repository.name}`,
+      isPrivate: repository.private,
+      defaultBranch: repository.default_branch,
+    }));
   }
 
   async listBranches(ref: GitHubRepositoryRef): Promise<GitHubConnectionSummary["branches"]> {
@@ -152,11 +178,17 @@ export class GitHubClient {
     content: string;
     sha: string;
   }): Promise<void> {
-    validateSaveBranchFileInput({
-      branch: options.branch,
-      path: options.path,
-      message: options.message,
-    });
+    if (options.branch.trim().length === 0) {
+      throw new Error("branch is required");
+    }
+
+    if (options.path.trim().length === 0) {
+      throw new Error("path is required");
+    }
+
+    if (options.message.trim().length === 0) {
+      throw new Error("commit message is required");
+    }
 
     await this.request(
       `/repos/${options.ref.owner}/${options.ref.name}/contents/${encodeURIComponent(options.path)}`,

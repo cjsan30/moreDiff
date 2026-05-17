@@ -13,18 +13,19 @@ $rootDir = if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
 }
 
 $hooksPath = Get-GitWorkflowResolvedPath -RootDir $rootDir -Name "hooks_path"
-$portableHooksPath = Join-Path $rootDir "harness\githooks"
+$portableHooksPath = Join-Path $rootDir "githooks"
+if (-not (Test-Path -LiteralPath $portableHooksPath)) {
+    $portableHooksPath = Join-Path $rootDir "harness\githooks"
+}
 Ensure-HarnessDirectory -Path $hooksPath
 
 foreach ($hookName in @("pre-commit", "pre-push", "pre-merge-commit", "pre-rebase")) {
     $hookPath = Join-Path $hooksPath $hookName
-    if (-not (Test-Path -LiteralPath $hookPath)) {
-        $portableHookPath = Join-Path $portableHooksPath $hookName
-        if (Test-Path -LiteralPath $portableHookPath) {
-            Copy-Item -LiteralPath $portableHookPath -Destination $hookPath -Force
-        } else {
-            throw "required hook file is missing: $hookPath; portable template not found: $portableHookPath"
-        }
+    $portableHookPath = Join-Path $portableHooksPath $hookName
+    if (Test-Path -LiteralPath $portableHookPath) {
+        Copy-Item -LiteralPath $portableHookPath -Destination $hookPath -Force
+    } else {
+        throw "required hook template is missing: $portableHookPath"
     }
 }
 

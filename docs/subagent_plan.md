@@ -14,14 +14,13 @@ Each worker should read:
 2. `docs/requirements.md`
 3. `docs/subagent_plan.md`
 4. `docs/subagent_first_prompts.md`
-5. `harness/AGENT.md`
-6. the owned folder `AGENT.md`, when present
+5. the owned folder `AGENT.md`, when present
 
 ## Git Rule
 
 - live work must happen on `codex/<owner>/<task>`
 - workers do not work directly on `main`, `dev`, or `codex/test/*`
-- commits, pushes, and promotions follow `harness/configs/git_policy.md`
+- commits, pushes, and promotions follow `configs/git_policy.md`
 
 ## Owner Map
 

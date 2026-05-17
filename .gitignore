@@ -4,3 +4,15 @@ coverage
 dist
 *.log
 *.tsbuildinfo
+assignments/*/
+reports/latest_report.md
+reports/preflight_report.md
+reports/test_results/
+reports/retry_prompts/
+reports/dispatch_packets/
+reports/agent_runs/
+reports/git_workflow/
+reports/seed_plans/*__dispatch_summary.md
+state/git_workflow/
+state/locks/
+state/worktrees/
