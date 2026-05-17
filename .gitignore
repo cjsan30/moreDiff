@@ -14,5 +14,6 @@ reports/agent_runs/
 reports/git_workflow/
 reports/seed_plans/*__dispatch_summary.md
 state/git_workflow/
+state/app/
 state/locks/
 state/worktrees/

@@ -225,7 +225,7 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
     }
   }
 
-  function persistCurrentSession(
+  async function persistCurrentSession(
     message = "Session metadata saved",
     branchHeadOverrides: Record<string, string> = {},
   ) {
@@ -234,18 +234,41 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
       return;
     }
 
+    const branchHeads = {
+      ...branchHeadShas,
+      ...branchHeadOverrides,
+    };
     const currentSessions = readRecentCompareSessions();
     const nextSessions = upsertRecentCompareSession(currentSessions, {
       repoUrl: connection.repoUrl,
       baseBranch: session.baseBranch,
       compareBranches: session.branches.map((branch) => branch.name),
-      branchHeads: {
-        ...branchHeadShas,
-        ...branchHeadOverrides,
-      },
+      branchHeads,
     });
     writeRecentCompareSessions(nextSessions);
-    setSessionSaveStatus(message);
+
+    try {
+      const response = await fetch("/api/compare/sessions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token: connection.token,
+          repoUrl: connection.repoUrl,
+          baseBranch: session.baseBranch,
+          compareBranches: session.branches.map((branch) => branch.name),
+          branchHeads,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error("server persistence failed");
+      }
+
+      setSessionSaveStatus(message);
+    } catch {
+      setSessionSaveStatus(`${message} locally; server persistence failed.`);
+    }
   }
 
   async function handleSaveBranch(
@@ -293,7 +316,7 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
       }
 
       markDraftSaved(branchName, path, content, payload.headSha);
-      persistCurrentSession(
+      void persistCurrentSession(
         `Saved ${path} and refreshed session metadata`,
         payload.headSha ? { [branchName]: payload.headSha } : {},
       );
@@ -329,7 +352,7 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
         <div className="workspaceHeaderActions">
           <button
             type="button"
-            onClick={() => persistCurrentSession()}
+            onClick={() => void persistCurrentSession()}
             disabled={!connection}
           >
             Save session

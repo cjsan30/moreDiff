@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { LIVE_COMPARE_STORAGE_KEY } from "@/src/domain/compare-launch";
 import {
   markRecentCompareSessionOpened,
+  mergeRecentCompareSessions,
   type RecentCompareSession,
   readRecentCompareSessions,
   upsertRecentCompareSession,
@@ -40,6 +41,11 @@ interface OAuthSessionResult {
   authenticated: boolean;
   viewerLogin?: string;
   repositories?: RepositoryOption[];
+  error?: string;
+}
+
+interface PersistedCompareSessionsResult {
+  sessions: RecentCompareSession[];
   error?: string;
 }
 
@@ -122,6 +128,7 @@ export function PatConnectionForm() {
       if (!repoUrl.trim() && payload.repositories?.[0]) {
         setRepoUrl(payload.repositories[0].url);
       }
+      await mergePersistedSessions();
     } catch {
       setOauthViewerLogin("");
     } finally {
@@ -138,6 +145,53 @@ export function PatConnectionForm() {
       setLoadedViewerLogin("");
       setRepositoryOptions([]);
       setResult(null);
+    }
+  }
+
+  async function mergePersistedSessions(tokenOverride = "") {
+    const headers: HeadersInit = tokenOverride
+      ? {
+          "x-morediff-token": tokenOverride,
+        }
+      : {};
+    const response = await fetch("/api/compare/sessions", {
+      headers,
+      cache: "no-store",
+    });
+    const payload = (await response.json()) as PersistedCompareSessionsResult;
+    if (!response.ok) {
+      return;
+    }
+
+    const nextSessions = mergeRecentCompareSessions(
+      readRecentCompareSessions(),
+      payload.sessions,
+    );
+    setRecentSessions(nextSessions);
+    writeRecentCompareSessions(nextSessions);
+  }
+
+  async function persistRecentSessionToServer(
+    session: RecentCompareSession,
+    markOpened: boolean,
+  ) {
+    try {
+      await fetch("/api/compare/sessions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token: token.trim(),
+          repoUrl: session.repoUrl,
+          baseBranch: session.baseBranch,
+          compareBranches: session.compareBranches,
+          branchHeads: session.branchHeads,
+          markOpened,
+        }),
+      });
+    } catch {
+      // Local session metadata remains usable even if server persistence is unavailable.
     }
   }
 
@@ -172,6 +226,7 @@ export function PatConnectionForm() {
       if (!repoUrl.trim() && payload.repositories[0]) {
         setRepoUrl(payload.repositories[0].url);
       }
+      await mergePersistedSessions(token.trim());
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -292,6 +347,7 @@ export function PatConnectionForm() {
     const nextSession = nextRecentSessions[0];
     setRecentSessions(nextRecentSessions);
     writeRecentCompareSessions(nextRecentSessions);
+    void persistRecentSessionToServer(nextSession, true);
 
     window.sessionStorage.setItem(
       LIVE_COMPARE_STORAGE_KEY,
@@ -319,6 +375,7 @@ export function PatConnectionForm() {
     );
     setRecentSessions(nextRecentSessions);
     writeRecentCompareSessions(nextRecentSessions);
+    void persistRecentSessionToServer(session, true);
 
     window.sessionStorage.setItem(
       LIVE_COMPARE_STORAGE_KEY,

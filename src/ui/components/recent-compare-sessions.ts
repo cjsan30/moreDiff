@@ -73,6 +73,34 @@ export function writeRecentCompareSessions(
   );
 }
 
+export function mergeRecentCompareSessions(
+  currentSessions: RecentCompareSession[],
+  incomingSessions: RecentCompareSession[],
+): RecentCompareSession[] {
+  const byId = new Map<string, RecentCompareSession>();
+  for (const session of [...currentSessions, ...incomingSessions]) {
+    const existing = byId.get(session.id);
+    byId.set(session.id, {
+      ...(existing ?? session),
+      ...session,
+      branchHeads: {
+        ...(existing?.branchHeads ?? {}),
+        ...(session.branchHeads ?? {}),
+      },
+      savedAt: newestTimestamp(existing?.savedAt, session.savedAt),
+      lastOpenedAt: newestTimestamp(existing?.lastOpenedAt, session.lastOpenedAt),
+    });
+  }
+
+  return [...byId.values()]
+    .sort(
+      (left, right) =>
+        new Date(right.lastOpenedAt ?? right.savedAt).getTime() -
+        new Date(left.lastOpenedAt ?? left.savedAt).getTime(),
+    )
+    .slice(0, MAX_RECENT_COMPARE_SESSIONS);
+}
+
 export function upsertRecentCompareSession(
   currentSessions: RecentCompareSession[],
   session: RecentCompareSessionInput,
@@ -143,4 +171,15 @@ function isStringRecord(value: unknown): value is Record<string, string> {
   }
 
   return Object.values(value).every((entry) => typeof entry === "string");
+}
+
+function newestTimestamp(left?: string, right?: string): string {
+  if (!left) {
+    return right ?? "";
+  }
+  if (!right) {
+    return left;
+  }
+
+  return new Date(left).getTime() > new Date(right).getTime() ? left : right;
 }

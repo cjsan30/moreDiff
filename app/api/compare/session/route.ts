@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { resolveGitHubRouteToken } from "@/app/api/github/auth-token";
+import { saveCompareSessionForToken } from "@/src/data/compare-session-store";
 import { buildCompareSessionFromGitHub } from "@/src/data/github-session-service";
 import { GitHubRequestError } from "@/src/github/client";
 
@@ -19,6 +20,16 @@ export async function POST(request: Request) {
       repoUrl: body.repoUrl ?? "",
       baseBranch: body.baseBranch ?? "",
       compareBranches: body.compareBranches ?? [],
+    });
+    await saveCompareSessionForToken({
+      token,
+      repoUrl: body.repoUrl ?? "",
+      baseBranch: body.baseBranch ?? "",
+      compareBranches: body.compareBranches ?? [],
+      branchHeads: Object.fromEntries(
+        session.branches.map((branch) => [branch.name, branch.headSha]),
+      ),
+      viewModel: session,
     });
 
     return NextResponse.json(session);
