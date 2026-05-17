@@ -16,6 +16,7 @@ interface LoadState {
   message?: string;
   session?: CompareSessionViewModel;
   connection?: {
+    sessionId?: string;
     token: string;
     repoUrl: string;
   };
@@ -69,6 +70,7 @@ export function LiveComparePage() {
   }, []);
 
   async function loadLiveSession(input: {
+    sessionId?: string;
     token: string;
     repoUrl: string;
     baseBranch: string;
@@ -99,6 +101,7 @@ export function LiveComparePage() {
         kind: "ready",
         session: payload,
         connection: {
+          sessionId: input.sessionId,
           token: input.token,
           repoUrl: input.repoUrl,
         },

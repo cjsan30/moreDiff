@@ -11,10 +11,24 @@ export function buildWorkspaceDraftMap(
 ): WorkspaceDraftMap {
   return Object.fromEntries(
     session.branches.flatMap((branch) =>
-      branch.files.map((file) => [
-        createWorkspaceDraftKey(branch.name, file.path),
-        file.content,
-      ]),
+      branch.files
+        .filter((file) => file.contentLoaded)
+        .map((file) => [
+          createWorkspaceDraftKey(branch.name, file.path),
+          file.content,
+        ]),
+    ),
+  );
+}
+
+export function buildLoadedWorkspaceContentKeys(
+  session: Pick<CompareSessionViewModel, "branches">,
+): Set<string> {
+  return new Set(
+    session.branches.flatMap((branch) =>
+      branch.files
+        .filter((file) => file.contentLoaded)
+        .map((file) => createWorkspaceDraftKey(branch.name, file.path)),
     ),
   );
 }

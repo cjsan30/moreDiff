@@ -9,7 +9,16 @@ export interface RecentCompareSession {
   repoUrl: string;
   baseBranch: string;
   compareBranches: string[];
+  branchHeads: Record<string, string>;
   savedAt: string;
+  lastOpenedAt?: string;
+}
+
+export interface RecentCompareSessionInput {
+  repoUrl: string;
+  baseBranch: string;
+  compareBranches: string[];
+  branchHeads?: Record<string, string>;
 }
 
 export function isRecentCompareSession(
@@ -25,6 +34,10 @@ export function isRecentCompareSession(
     typeof candidate.repoUrl === "string" &&
     typeof candidate.baseBranch === "string" &&
     typeof candidate.savedAt === "string" &&
+    (candidate.lastOpenedAt === undefined ||
+      typeof candidate.lastOpenedAt === "string") &&
+    (candidate.branchHeads === undefined ||
+      isStringRecord(candidate.branchHeads)) &&
     Array.isArray(candidate.compareBranches) &&
     candidate.compareBranches.every((branch) => typeof branch === "string")
   );
@@ -45,7 +58,7 @@ export function readRecentCompareSessions(): RecentCompareSession[] {
       return [];
     }
 
-    return parsed.filter(isRecentCompareSession);
+    return parsed.filter(isRecentCompareSession).map(normalizeRecentCompareSession);
   } catch {
     return [];
   }
@@ -62,14 +75,26 @@ export function writeRecentCompareSessions(
 
 export function upsertRecentCompareSession(
   currentSessions: RecentCompareSession[],
-  session: Omit<RecentCompareSession, "id" | "savedAt">,
+  session: RecentCompareSessionInput,
+  options: {
+    markOpened?: boolean;
+    now?: string;
+  } = {},
 ): RecentCompareSession[] {
+  const id = createRecentCompareSessionId(session);
+  const existing = currentSessions.find((entry) => entry.id === id);
+  const now = options.now ?? new Date().toISOString();
   const nextEntry: RecentCompareSession = {
-    id: createRecentCompareSessionId(session),
+    id,
     repoUrl: session.repoUrl,
     baseBranch: session.baseBranch,
     compareBranches: [...session.compareBranches],
-    savedAt: new Date().toISOString(),
+    branchHeads: {
+      ...(existing?.branchHeads ?? {}),
+      ...(session.branchHeads ?? {}),
+    },
+    savedAt: now,
+    lastOpenedAt: options.markOpened ? now : existing?.lastOpenedAt,
   };
 
   return [
@@ -78,12 +103,44 @@ export function upsertRecentCompareSession(
   ].slice(0, MAX_RECENT_COMPARE_SESSIONS);
 }
 
-function createRecentCompareSessionId(
-  session: Omit<RecentCompareSession, "id" | "savedAt">,
+export function markRecentCompareSessionOpened(
+  currentSessions: RecentCompareSession[],
+  sessionId: string,
+  now = new Date().toISOString(),
+): RecentCompareSession[] {
+  return currentSessions.map((session) =>
+    session.id === sessionId
+      ? {
+          ...session,
+          lastOpenedAt: now,
+        }
+      : session,
+  );
+}
+
+export function createRecentCompareSessionId(
+  session: RecentCompareSessionInput,
 ): string {
   return JSON.stringify({
     repoUrl: session.repoUrl,
     baseBranch: session.baseBranch,
     compareBranches: [...session.compareBranches].sort(),
   });
+}
+
+function normalizeRecentCompareSession(
+  session: RecentCompareSession,
+): RecentCompareSession {
+  return {
+    ...session,
+    branchHeads: session.branchHeads ?? {},
+  };
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  return Object.values(value).every((entry) => typeof entry === "string");
 }

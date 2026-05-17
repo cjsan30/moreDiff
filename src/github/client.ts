@@ -154,12 +154,6 @@ export class GitHubClient {
       (compare.files ?? []).map(async (file) => {
         const normalizedStatus: FileStatus =
           file.status === "removed" ? "deleted" : file.status;
-        let content = "";
-
-        if (normalizedStatus !== "deleted") {
-          const fileContents = await this.getFileContent(ref, compareBranch, file.filename);
-          content = fileContents.content;
-        }
 
         return {
           path: file.filename,
@@ -167,7 +161,8 @@ export class GitHubClient {
           additions: file.additions,
           deletions: file.deletions,
           patch: file.patch ?? "patch unavailable",
-          content,
+          content: "",
+          contentLoaded: normalizedStatus === "deleted",
         };
       }),
     );

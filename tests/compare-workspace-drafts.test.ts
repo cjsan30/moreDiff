@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildLoadedWorkspaceContentKeys,
   buildWorkspaceDraftMap,
   countWorkspaceDirtyDrafts,
   countWorkspaceDirtyDraftsForPath,
@@ -22,6 +23,7 @@ describe("compare workspace draft tracking", () => {
             deletions: 0,
             patch: "@@",
             content: "alpha",
+            contentLoaded: true,
           },
         ],
       },
@@ -36,6 +38,7 @@ describe("compare workspace draft tracking", () => {
             deletions: 0,
             patch: "@@",
             content: "beta",
+            contentLoaded: true,
           },
         ],
       },
@@ -72,5 +75,30 @@ describe("compare workspace draft tracking", () => {
         "src/app.ts",
       ),
     ).toBe(1);
+  });
+
+  it("excludes lazy unloaded file content from initial drafts", () => {
+    const lazySession = {
+      branches: [
+        {
+          name: "feature/a",
+          headSha: "a",
+          files: [
+            {
+              path: "src/lazy.ts",
+              status: "modified" as const,
+              additions: 3,
+              deletions: 1,
+              patch: "@@",
+              content: "",
+              contentLoaded: false,
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(buildWorkspaceDraftMap(lazySession)).toEqual({});
+    expect(buildLoadedWorkspaceContentKeys(lazySession).size).toBe(0);
   });
 });

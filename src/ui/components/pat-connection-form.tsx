@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { LIVE_COMPARE_STORAGE_KEY } from "@/src/domain/compare-launch";
 import {
+  markRecentCompareSessionOpened,
   type RecentCompareSession,
   readRecentCompareSessions,
   upsertRecentCompareSession,
@@ -215,17 +216,28 @@ export function PatConnectionForm() {
     setIsLaunching(true);
     setError("");
 
+    const branchHeads = Object.fromEntries(
+      result.branches
+        .filter(
+          (branch) =>
+            branch.name === baseBranch || selectedBranches.includes(branch.name),
+        )
+        .map((branch) => [branch.name, branch.headSha]),
+    );
     const nextRecentSessions = upsertRecentCompareSession(recentSessions, {
       repoUrl,
       baseBranch,
       compareBranches: selectedBranches,
-    });
+      branchHeads,
+    }, { markOpened: true });
+    const nextSession = nextRecentSessions[0];
     setRecentSessions(nextRecentSessions);
     writeRecentCompareSessions(nextRecentSessions);
 
     window.sessionStorage.setItem(
       LIVE_COMPARE_STORAGE_KEY,
       JSON.stringify({
+        sessionId: nextSession.id,
         token,
         repoUrl,
         baseBranch,
@@ -234,6 +246,33 @@ export function PatConnectionForm() {
     );
 
     router.push("/compare");
+  }
+
+  function handleReopenRecentSession(session: RecentCompareSession) {
+    if (token.trim().length === 0) {
+      setError("enter a PAT before reopening a saved session");
+      return;
+    }
+
+    const nextRecentSessions = markRecentCompareSessionOpened(
+      recentSessions,
+      session.id,
+    );
+    setRecentSessions(nextRecentSessions);
+    writeRecentCompareSessions(nextRecentSessions);
+
+    window.sessionStorage.setItem(
+      LIVE_COMPARE_STORAGE_KEY,
+      JSON.stringify({
+        sessionId: session.id,
+        token,
+        repoUrl: session.repoUrl,
+        baseBranch: session.baseBranch,
+        compareBranches: session.compareBranches,
+      }),
+    );
+
+    router.push(`/compare?session=${encodeURIComponent(session.id)}`);
   }
 
   function handleReuseRecentSession(session: RecentCompareSession) {
@@ -271,7 +310,8 @@ export function PatConnectionForm() {
             <div>
               <h2>Recent compare sessions</h2>
               <p>
-                Reuse a saved repository and branch shape after validating a PAT.
+                Reopen saved repository and branch metadata with the PAT you enter.
+                Tokens are not stored in saved sessions.
               </p>
             </div>
           </div>
@@ -292,8 +332,20 @@ export function PatConnectionForm() {
                     <time dateTime={session.savedAt}>
                       Saved {formatSavedAt(session.savedAt)}
                     </time>
+                    {session.lastOpenedAt ? (
+                      <time dateTime={session.lastOpenedAt}>
+                        Opened {formatSavedAt(session.lastOpenedAt)}
+                      </time>
+                    ) : null}
                   </div>
                   <div className="recentSessionActions">
+                    <button
+                      type="button"
+                      className="primaryMiniButton"
+                      onClick={() => handleReopenRecentSession(session)}
+                    >
+                      Reopen
+                    </button>
                     <button
                       type="button"
                       className="secondaryButton"

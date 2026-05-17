@@ -20,6 +20,7 @@ export function buildMockCompareSession() {
             patch: "@@ -1,5 +1,6 @@",
             content:
               "export default function LoginPage() {\n  return <h1>Welcome back</h1>;\n}\n",
+            contentLoaded: true,
           },
           {
             path: "src/ui/auth-form.tsx",
@@ -29,6 +30,7 @@ export function buildMockCompareSession() {
             patch: "@@ -10,8 +10,11 @@",
             content:
               "export function AuthForm() {\n  return <form aria-label=\"auth form\">Updated form</form>;\n}\n",
+            contentLoaded: true,
           },
         ],
       },
@@ -44,6 +46,7 @@ export function buildMockCompareSession() {
             patch: "@@ -3,4 +3,8 @@",
             content:
               "export default function LoginPage() {\n  return <h1 tabIndex={-1}>Sign in</h1>;\n}\n",
+            contentLoaded: true,
           },
           {
             path: "src/ui/field.tsx",
@@ -53,6 +56,7 @@ export function buildMockCompareSession() {
             patch: "@@ -0,0 +1,22 @@",
             content:
               "export function Field() {\n  return <label>Accessible field</label>;\n}\n",
+            contentLoaded: true,
           },
         ],
       },
@@ -68,6 +72,7 @@ export function buildMockCompareSession() {
             patch: "@@ -0,0 +1,31 @@",
             content:
               "export function shouldRateLimit() {\n  return false;\n}\n",
+            contentLoaded: true,
           },
           {
             path: "src/ui/auth-form.tsx",
@@ -77,6 +82,7 @@ export function buildMockCompareSession() {
             patch: "@@ -2,4 +2,8 @@",
             content:
               "export function AuthForm() {\n  return <form data-rate-limit=\"inline\">Updated form</form>;\n}\n",
+            contentLoaded: true,
           },
         ],
       },

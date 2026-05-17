@@ -1,6 +1,7 @@
 export const LIVE_COMPARE_STORAGE_KEY = "morediff.live-compare";
 
 export interface LiveCompareLaunchState {
+  sessionId?: string;
   token: string;
   repoUrl: string;
   baseBranch: string;
@@ -16,6 +17,7 @@ export function isLiveCompareLaunchState(
 
   const candidate = value as Partial<LiveCompareLaunchState>;
   return (
+    (candidate.sessionId === undefined || typeof candidate.sessionId === "string") &&
     typeof candidate.token === "string" &&
     typeof candidate.repoUrl === "string" &&
     typeof candidate.baseBranch === "string" &&

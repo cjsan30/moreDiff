@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildCompareSessionFromGitHub,
+  loadBranchFileContentFromGitHub,
   saveBranchFileToGitHub,
   validatePatConnection,
 } from "@/src/data/github-session-service";
@@ -119,6 +120,127 @@ describe("github session service validation", () => {
     ).rejects.toThrow("base branch cannot be included in compare branches");
 
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("builds compare sessions without eagerly loading every changed file content", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          files: [
+            {
+              filename: "src/app.ts",
+              status: "modified",
+              additions: 2,
+              deletions: 1,
+              patch: "@@ -1,1 +1,2 @@",
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          files: [
+            {
+              filename: "src/other.ts",
+              status: "added",
+              additions: 4,
+              deletions: 0,
+              patch: "@@ -0,0 +1,4 @@",
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          name: "feature/a",
+          commit: {
+            sha: "head-a",
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          name: "feature/b",
+          commit: {
+            sha: "head-b",
+          },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      buildCompareSessionFromGitHub({
+        token: VALID_TOKEN,
+        repoUrl: VALID_REPO_URL,
+        baseBranch: "main",
+        compareBranches: ["feature/a", "feature/b"],
+      }),
+    ).resolves.toMatchObject({
+      branches: [
+        {
+          name: "feature/a",
+          files: [
+            {
+              path: "src/app.ts",
+              content: "",
+              contentLoaded: false,
+            },
+          ],
+        },
+        {
+          name: "feature/b",
+          files: [
+            {
+              path: "src/other.ts",
+              content: "",
+              contentLoaded: false,
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).includes("/contents/")),
+    ).toBe(false);
+  });
+
+  it("loads one branch file content with head validation", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          name: "feature/a",
+          commit: {
+            sha: "head-123",
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          sha: "blob-123",
+          content: Buffer.from("loaded content").toString("base64"),
+          encoding: "base64",
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      loadBranchFileContentFromGitHub({
+        token: VALID_TOKEN,
+        repoUrl: VALID_REPO_URL,
+        ...VALID_SAVE_CONTEXT,
+        path: "src/app.ts",
+      }),
+    ).resolves.toEqual({
+      content: "loaded content",
+      contentSha: "blob-123",
+      headSha: "head-123",
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("rejects save requests without a branch before GitHub calls", async () => {

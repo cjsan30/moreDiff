@@ -121,3 +121,36 @@ export async function saveBranchFileToGitHub(input: {
 
   return savedFile;
 }
+
+export async function loadBranchFileContentFromGitHub(input: {
+  token: string;
+  repoUrl: string;
+  baseBranch: string;
+  branch: string;
+  compareBranches: string[];
+  expectedHeadSha: string;
+  path: string;
+}) {
+  const token = assertPatToken(input.token);
+  const repositoryRef = parseGitHubRepositoryUrl(input.repoUrl);
+  validateSaveBranchFileInput({
+    baseBranch: input.baseBranch,
+    branch: input.branch,
+    compareBranches: input.compareBranches,
+    expectedHeadSha: input.expectedHeadSha,
+    path: input.path,
+    message: "load file content",
+  });
+  const client = new GitHubClient(token);
+  const currentHead = await client.getBranchHead(repositoryRef, input.branch);
+  if (currentHead.headSha !== input.expectedHeadSha) {
+    throw new Error("branch head changed; reload compare session before editing");
+  }
+
+  const file = await client.getFileContent(repositoryRef, input.branch, input.path);
+  return {
+    content: file.content,
+    contentSha: file.sha,
+    headSha: currentHead.headSha,
+  };
+}

@@ -1,23 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { CompareSessionViewModel } from "@/src/domain/types";
 import {
+  buildLoadedWorkspaceContentKeys,
   buildWorkspaceDraftMap,
   countWorkspaceDirtyDrafts,
   countWorkspaceDirtyDraftsForPath,
   createWorkspaceDraftKey,
   isWorkspaceDraftDirty,
 } from "@/src/ui/components/compare-workspace-drafts";
+import {
+  readRecentCompareSessions,
+  upsertRecentCompareSession,
+  writeRecentCompareSessions,
+} from "@/src/ui/components/recent-compare-sessions";
 
 type FileFilter = "any" | "overlap" | "all" | "branch";
+const FILE_PAGE_SIZE = 80;
 
 interface CompareWorkspaceProps {
   session: CompareSessionViewModel;
   connection?: {
     token: string;
     repoUrl: string;
+    sessionId?: string;
   };
 }
 
@@ -29,6 +37,15 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
   const [drafts, setDrafts] = useState(() =>
     buildWorkspaceDraftMap(session),
   );
+  const [loadedContentKeys, setLoadedContentKeys] = useState(() =>
+    buildLoadedWorkspaceContentKeys(session),
+  );
+  const [loadingContentKeys, setLoadingContentKeys] = useState<Record<string, boolean>>(
+    {},
+  );
+  const [failedContentKeys, setFailedContentKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [branchHeadShas, setBranchHeadShas] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       session.branches.map((branch) => [branch.name, branch.headSha]),
@@ -36,11 +53,14 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
   );
   const [lastSaved, setLastSaved] = useState<string>("");
   const [saveError, setSaveError] = useState<string>("");
+  const [contentLoadError, setContentLoadError] = useState<string>("");
+  const [sessionSaveStatus, setSessionSaveStatus] = useState<string>("");
   const [savingBranchName, setSavingBranchName] = useState<string>("");
   const [fileFilter, setFileFilter] = useState<FileFilter>("any");
   const [filterBranchName, setFilterBranchName] = useState(
     session.branches[0]?.name ?? "",
   );
+  const [visibleFileLimit, setVisibleFileLimit] = useState(FILE_PAGE_SIZE);
 
   const filteredRows = session.fileMatrix.filter((row) => {
     const changedBranches = row.branches.filter((branch) => branch.changed);
@@ -74,6 +94,109 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
   );
   const dirtyDraftCount = countWorkspaceDirtyDrafts(drafts, savedContents);
   const branchNames = session.branches.map((branch) => branch.name);
+  const visibleRows = filteredRows.slice(0, visibleFileLimit);
+
+  useEffect(() => {
+    if (!connection || !selectedPath) {
+      return;
+    }
+
+    for (const branch of activeBranches) {
+      if (!branch.file || branch.file.contentLoaded) {
+        continue;
+      }
+
+      const key = createWorkspaceDraftKey(branch.name, selectedPath);
+      if (
+        loadedContentKeys.has(key) ||
+        loadingContentKeys[key] ||
+        failedContentKeys.has(key)
+      ) {
+        continue;
+      }
+
+      void loadBranchContent(branch.name, selectedPath, key);
+    }
+  });
+
+  useEffect(() => {
+    setVisibleFileLimit(FILE_PAGE_SIZE);
+  }, [fileFilter, filterBranchName]);
+
+  async function loadBranchContent(
+    branchName: string,
+    path: string,
+    key: string,
+  ) {
+    if (!connection) {
+      return;
+    }
+
+    setLoadingContentKeys((current) => ({
+      ...current,
+      [key]: true,
+    }));
+    setContentLoadError("");
+
+    try {
+      const response = await fetch("/api/github/file-content", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token: connection.token,
+          repoUrl: connection.repoUrl,
+          baseBranch: session.baseBranch,
+          branch: branchName,
+          compareBranches: session.branches.map((branch) => branch.name),
+          expectedHeadSha: branchHeadShas[branchName] ?? "",
+          path,
+        }),
+      });
+
+      const payload = (await response.json()) as {
+        error?: string;
+        content?: string;
+        headSha?: string;
+      };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "failed to load branch file");
+      }
+
+      const content = payload.content ?? "";
+      setDrafts((current) =>
+        Object.prototype.hasOwnProperty.call(current, key)
+          ? current
+          : {
+              ...current,
+              [key]: content,
+            },
+      );
+      setSavedContents((current) => ({
+        ...current,
+        [key]: content,
+      }));
+      setLoadedContentKeys((current) => new Set([...current, key]));
+
+      if (payload.headSha) {
+        setBranchHeadShas((current) => ({
+          ...current,
+          [branchName]: payload.headSha ?? current[branchName],
+        }));
+      }
+    } catch (error) {
+      setFailedContentKeys((current) => new Set([...current, key]));
+      setContentLoadError(
+        error instanceof Error ? error.message : "failed to load branch file",
+      );
+    } finally {
+      setLoadingContentKeys((current) => ({
+        ...current,
+        [key]: false,
+      }));
+    }
+  }
 
   function markDraftSaved(
     branchName: string,
@@ -82,10 +205,15 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
     nextHeadSha?: string,
   ) {
     const key = createWorkspaceDraftKey(branchName, path);
+    setDrafts((current) => ({
+      ...current,
+      [key]: content,
+    }));
     setSavedContents((current) => ({
       ...current,
       [key]: content,
     }));
+    setLoadedContentKeys((current) => new Set([...current, key]));
 
     if (nextHeadSha) {
       setBranchHeadShas((current) => ({
@@ -93,6 +221,29 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
         [branchName]: nextHeadSha,
       }));
     }
+  }
+
+  function persistCurrentSession(
+    message = "Session metadata saved",
+    branchHeadOverrides: Record<string, string> = {},
+  ) {
+    if (!connection) {
+      setSessionSaveStatus("Demo sessions are not persisted.");
+      return;
+    }
+
+    const currentSessions = readRecentCompareSessions();
+    const nextSessions = upsertRecentCompareSession(currentSessions, {
+      repoUrl: connection.repoUrl,
+      baseBranch: session.baseBranch,
+      compareBranches: session.branches.map((branch) => branch.name),
+      branchHeads: {
+        ...branchHeadShas,
+        ...branchHeadOverrides,
+      },
+    });
+    writeRecentCompareSessions(nextSessions);
+    setSessionSaveStatus(message);
   }
 
   async function handleSaveBranch(
@@ -140,6 +291,10 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
       }
 
       markDraftSaved(branchName, path, content, payload.headSha);
+      persistCurrentSession(
+        `Saved ${path} and refreshed session metadata`,
+        payload.headSha ? { [branchName]: payload.headSha } : {},
+      );
       setLastSaved(`Saved ${path} to ${branchName}`);
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "save failed");
@@ -168,6 +323,20 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
               </>
             ) : null}
           </p>
+        </div>
+        <div className="workspaceHeaderActions">
+          <button
+            type="button"
+            onClick={() => persistCurrentSession()}
+            disabled={!connection}
+          >
+            Save session
+          </button>
+          <span>
+            {connection
+              ? "Repo and branch metadata are stored without the PAT."
+              : "Demo session"}
+          </span>
         </div>
         <div className="workspaceStats">
           <div>
@@ -224,8 +393,12 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
               </label>
             ) : null}
           </div>
+          <p className="listSummary">
+            Showing {Math.min(visibleRows.length, filteredRows.length)} of{" "}
+            {filteredRows.length} matching files.
+          </p>
           <ul className="fileList">
-            {filteredRows.map((row) => {
+            {visibleRows.map((row) => {
               const changedCount = row.branches.filter((branch) => branch.changed).length;
               const isOverlap = changedCount > 1;
               const dirtyCount = countWorkspaceDirtyDraftsForPath(
@@ -256,6 +429,17 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
           </ul>
           {filteredRows.length === 0 ? (
             <p className="emptyState">No files match this filter.</p>
+          ) : null}
+          {visibleRows.length < filteredRows.length ? (
+            <button
+              type="button"
+              className="loadMoreButton"
+              onClick={() =>
+                setVisibleFileLimit((current) => current + FILE_PAGE_SIZE)
+              }
+            >
+              Show {Math.min(FILE_PAGE_SIZE, filteredRows.length - visibleRows.length)} more
+            </button>
           ) : null}
         </aside>
 
@@ -308,8 +492,15 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
           <div className="editorGrid">
             {activeBranches.map((branch) => {
               const key = createWorkspaceDraftKey(branch.name, selectedPath);
-              const content = drafts[key] ?? branch.file?.content ?? "";
-              const isDirty = isWorkspaceDraftDirty(drafts, savedContents, key);
+              const isContentLoaded =
+                loadedContentKeys.has(key) || branch.file?.contentLoaded === true;
+              const isContentLoading = Boolean(loadingContentKeys[key]);
+              const content = isContentLoaded
+                ? drafts[key] ?? branch.file?.content ?? ""
+                : "";
+              const isDirty =
+                isContentLoaded &&
+                isWorkspaceDraftDirty(drafts, savedContents, key);
               const expectedHeadSha = branchHeadShas[branch.name] ?? branch.headSha;
               return (
                 <article className="editorCard" key={key}>
@@ -321,7 +512,11 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
                         {branch.file?.deletions}
                       </p>
                       <span className={isDirty ? "dirtyBadge" : "cleanBadge"}>
-                        {isDirty ? "Unsaved changes" : "No unsaved changes"}
+                        {isContentLoading
+                          ? "Loading file content"
+                          : isDirty
+                            ? "Unsaved changes"
+                            : "No unsaved changes"}
                       </span>
                     </div>
                     <button
@@ -342,7 +537,13 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
                   <pre className="patchBlock">{branch.file?.patch}</pre>
                   <textarea
                     aria-label={`Editor for ${branch.name} ${selectedPath}`}
+                    placeholder={
+                      isContentLoading
+                        ? "Loading branch file content..."
+                        : "File content is loaded when this pane becomes active."
+                    }
                     value={content}
+                    disabled={!isContentLoaded || isContentLoading}
                     onChange={(event) =>
                       setDrafts((current) => ({
                         ...current,
@@ -356,7 +557,13 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
           </div>
 
           {lastSaved ? <p className="saveNotice">{lastSaved}</p> : null}
+          {sessionSaveStatus ? (
+            <p className="saveNotice">{sessionSaveStatus}</p>
+          ) : null}
           {saveError ? <p className="errorNotice">{saveError}</p> : null}
+          {contentLoadError ? (
+            <p className="errorNotice">{contentLoadError}</p>
+          ) : null}
         </section>
       </section>
     </main>

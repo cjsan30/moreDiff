@@ -7,6 +7,7 @@ export interface BranchDiffFile {
   deletions: number;
   patch: string;
   content: string;
+  contentLoaded: boolean;
 }
 
 export interface CompareBranch {
