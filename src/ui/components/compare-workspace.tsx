@@ -16,6 +16,7 @@ import {
   upsertRecentCompareSession,
   writeRecentCompareSessions,
 } from "@/src/ui/components/recent-compare-sessions";
+import { DiffView, type DiffViewMode } from "@/src/ui/components/diff-view";
 
 type FileFilter = "any" | "overlap" | "all" | "branch";
 const FILE_PAGE_SIZE = 80;
@@ -57,6 +58,7 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
   const [sessionSaveStatus, setSessionSaveStatus] = useState<string>("");
   const [savingBranchName, setSavingBranchName] = useState<string>("");
   const [fileFilter, setFileFilter] = useState<FileFilter>("any");
+  const [diffViewMode, setDiffViewMode] = useState<DiffViewMode>("unified");
   const [filterBranchName, setFilterBranchName] = useState(
     session.branches[0]?.name ?? "",
   );
@@ -451,6 +453,25 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
               change.
             </p>
           </div>
+          <div className="diffModeControls">
+            <span>Diff view</span>
+            <div>
+              <button
+                type="button"
+                className={diffViewMode === "unified" ? "active" : ""}
+                onClick={() => setDiffViewMode("unified")}
+              >
+                Unified
+              </button>
+              <button
+                type="button"
+                className={diffViewMode === "split" ? "active" : ""}
+                onClick={() => setDiffViewMode("split")}
+              >
+                Split
+              </button>
+            </div>
+          </div>
 
           <div className="matrixPanel">
             <div className="matrixHeader">
@@ -534,7 +555,10 @@ export function CompareWorkspace({ session, connection }: CompareWorkspaceProps)
                       {savingBranchName === branch.name ? "Saving..." : "Save branch"}
                     </button>
                   </header>
-                  <pre className="patchBlock">{branch.file?.patch}</pre>
+                  <DiffView
+                    patch={branch.file?.patch ?? "patch unavailable"}
+                    mode={diffViewMode}
+                  />
                   <textarea
                     aria-label={`Editor for ${branch.name} ${selectedPath}`}
                     placeholder={

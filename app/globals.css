@@ -300,6 +300,44 @@ input {
   overflow: hidden;
 }
 
+.diffModeControls {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.diffModeControls span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.diffModeControls div {
+  display: flex;
+  gap: 8px;
+}
+
+.diffModeControls button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: white;
+  color: var(--ink);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.diffModeControls button.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
 .overlapPanel {
   margin-top: 18px;
   padding: 16px;
@@ -399,6 +437,63 @@ input {
   border-radius: 14px;
   background: #f3f4f6;
   overflow: auto;
+}
+
+.splitDiffTable {
+  margin: 14px 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: auto;
+  background: #f8fafc;
+}
+
+.splitDiffHeader,
+.splitDiffRow {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr);
+}
+
+.splitDiffHeader {
+  position: sticky;
+  top: 0;
+  background: var(--panel-strong);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.splitDiffHeader span,
+.splitDiffRow code {
+  padding: 9px 12px;
+  border-right: 1px solid var(--line);
+  white-space: pre;
+}
+
+.splitDiffHeader span:last-child,
+.splitDiffRow code:last-child {
+  border-right: 0;
+}
+
+.splitDiffRow {
+  border-top: 1px solid rgba(217, 207, 191, 0.72);
+}
+
+.splitDiffRow.hunk {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.splitDiffRow.add code:last-child {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.splitDiffRow.delete code:first-child {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .editorCard textarea {
