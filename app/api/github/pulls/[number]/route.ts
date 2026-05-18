@@ -40,7 +40,7 @@ export async function PATCH(
     return NextResponse.json(
       {
         error:
-          error instanceof Error ? error.message : "failed to update pull request",
+          error instanceof Error ? error.message : "풀 리퀘스트를 업데이트하지 못했습니다",
       },
       {
         status: error instanceof GitHubRequestError ? error.status : 400,

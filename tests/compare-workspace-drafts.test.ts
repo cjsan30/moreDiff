@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildLoadedWorkspaceBaseContentKeys,
   buildLoadedWorkspaceContentKeys,
+  buildWorkspaceBaseContentMap,
   buildWorkspaceDraftMap,
   countWorkspaceDirtyDrafts,
   countWorkspaceDirtyDraftsForPath,
@@ -24,6 +26,8 @@ describe("compare workspace draft tracking", () => {
             patch: "@@",
             content: "alpha",
             contentLoaded: true,
+            baseContent: "base alpha",
+            baseContentLoaded: true,
           },
         ],
       },
@@ -67,6 +71,12 @@ describe("compare workspace draft tracking", () => {
       ),
     ).toBe(false);
     expect(countWorkspaceDirtyDrafts(drafts, savedContents)).toBe(1);
+    expect(buildWorkspaceBaseContentMap(session)).toEqual({
+      [createWorkspaceDraftKey("feature/a", "src/app.ts")]: "base alpha",
+    });
+    expect(buildLoadedWorkspaceBaseContentKeys(session)).toEqual(
+      new Set([createWorkspaceDraftKey("feature/a", "src/app.ts")]),
+    );
     expect(
       countWorkspaceDirtyDraftsForPath(
         drafts,
@@ -100,5 +110,7 @@ describe("compare workspace draft tracking", () => {
 
     expect(buildWorkspaceDraftMap(lazySession)).toEqual({});
     expect(buildLoadedWorkspaceContentKeys(lazySession).size).toBe(0);
+    expect(buildWorkspaceBaseContentMap(lazySession)).toEqual({});
+    expect(buildLoadedWorkspaceBaseContentKeys(lazySession).size).toBe(0);
   });
 });

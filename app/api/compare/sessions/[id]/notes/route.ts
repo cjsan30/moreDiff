@@ -34,7 +34,7 @@ export async function GET(
       {
         notes: [],
         error:
-          error instanceof Error ? error.message : "failed to list review notes",
+          error instanceof Error ? error.message : "리뷰 노트 목록을 불러오지 못했습니다",
       },
       {
         status: error instanceof GitHubRequestError ? error.status : 400,
@@ -79,7 +79,7 @@ export async function POST(
     return NextResponse.json(
       {
         error:
-          error instanceof Error ? error.message : "failed to save review note",
+          error instanceof Error ? error.message : "리뷰 노트를 저장하지 못했습니다",
       },
       {
         status: error instanceof GitHubRequestError ? error.status : 400,

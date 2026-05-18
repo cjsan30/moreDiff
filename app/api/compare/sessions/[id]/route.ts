@@ -34,7 +34,7 @@ export async function GET(
     return NextResponse.json(
       {
         error:
-          error instanceof Error ? error.message : "failed to load saved session",
+          error instanceof Error ? error.message : "저장된 세션을 불러오지 못했습니다",
       },
       {
         status: error instanceof GitHubRequestError ? error.status : 400,

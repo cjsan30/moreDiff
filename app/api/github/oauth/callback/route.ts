@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   try {
     const code = requestUrl.searchParams.get("code")?.trim() ?? "";
     if (!code) {
-      throw new Error("GitHub OAuth callback did not include a code");
+      throw new Error("GitHub OAuth 콜백에 code가 포함되지 않았습니다");
     }
 
     const expectedState = request.headers
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
     redirectToConnect.searchParams.set("auth", "error");
     redirectToConnect.searchParams.set(
       "message",
-      error instanceof Error ? error.message : "GitHub OAuth failed",
+      error instanceof Error ? error.message : "GitHub OAuth에 실패했습니다",
     );
     const response = NextResponse.redirect(redirectToConnect);
     response.cookies.delete(GITHUB_OAUTH_STATE_COOKIE);

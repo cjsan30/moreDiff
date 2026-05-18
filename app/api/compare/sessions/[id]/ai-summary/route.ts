@@ -36,7 +36,7 @@ export async function GET(
         error:
           error instanceof Error
             ? error.message
-            : "failed to generate AI review summary",
+            : "AI 리뷰 요약을 생성하지 못했습니다",
       },
       {
         status: error instanceof GitHubRequestError ? error.status : 400,

@@ -11,7 +11,7 @@ describe("compare session rules", () => {
   describe("branch selection validation", () => {
     it("rejects fewer than two branches", () => {
       expect(() => validateBranchCount(1)).toThrow(
-        "compare sessions require between 2 and 6 branches",
+        "비교 세션은 2개 이상 6개 이하의 브랜치가 필요합니다",
       );
     });
 
@@ -21,7 +21,7 @@ describe("compare session rules", () => {
 
     it("rejects more than six compare branches", () => {
       expect(() => validateBranchCount(7)).toThrow(
-        "compare sessions require between 2 and 6 branches",
+        "비교 세션은 2개 이상 6개 이하의 브랜치가 필요합니다",
       );
     });
 
@@ -35,7 +35,7 @@ describe("compare session rules", () => {
             buildBranch("feature/a", "2", []),
           ],
         }),
-      ).toThrow("duplicate compare branches are not allowed");
+      ).toThrow("중복 비교 브랜치는 허용되지 않습니다");
     });
 
     it("requires a base branch for compare session requests", () => {
@@ -44,7 +44,7 @@ describe("compare session rules", () => {
           baseBranch: "   ",
           compareBranches: ["feature/a", "feature/b"],
         }),
-      ).toThrow("base branch is required");
+      ).toThrow("기준 브랜치가 필요합니다");
     });
 
     it("rejects an empty compare branch name", () => {
@@ -53,7 +53,7 @@ describe("compare session rules", () => {
           baseBranch: "main",
           compareBranches: ["feature/a", "   "],
         }),
-      ).toThrow("compare branches must not be empty");
+      ).toThrow("비교 브랜치는 비어 있을 수 없습니다");
     });
 
     it("rejects compare requests that include the base branch", () => {
@@ -62,7 +62,7 @@ describe("compare session rules", () => {
           baseBranch: "main",
           compareBranches: ["feature/a", "main"],
         }),
-      ).toThrow("base branch cannot be included in compare branches");
+      ).toThrow("기준 브랜치는 비교 브랜치에 포함될 수 없습니다");
     });
   });
 

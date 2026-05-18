@@ -42,7 +42,7 @@ export function LiveComparePage() {
       setState({
         kind: "error",
         message:
-          "No live compare session was found. Connect a repository first or open the demo workspace.",
+          "실시간 비교 세션을 찾을 수 없습니다. 먼저 저장소를 연결하거나 데모 작업 공간을 여세요.",
       });
       return;
     }
@@ -53,7 +53,7 @@ export function LiveComparePage() {
     } catch {
       setState({
         kind: "error",
-        message: "Stored compare session data is invalid. Reconnect the repository.",
+        message: "저장된 비교 세션 데이터가 올바르지 않습니다. 저장소를 다시 연결하세요.",
       });
       return;
     }
@@ -61,7 +61,7 @@ export function LiveComparePage() {
     if (!isLiveCompareLaunchState(parsed)) {
       setState({
         kind: "error",
-        message: "Stored compare session data is incomplete. Reconnect the repository.",
+        message: "저장된 비교 세션 데이터가 불완전합니다. 저장소를 다시 연결하세요.",
       });
       return;
     }
@@ -105,7 +105,7 @@ export function LiveComparePage() {
       };
 
       if (!response.ok) {
-        throw new Error(payload.error ?? "failed to build compare session");
+        throw new Error(payload.error ?? "비교 세션을 만들지 못했습니다");
       }
 
       setState({
@@ -121,7 +121,7 @@ export function LiveComparePage() {
       setState({
         kind: "error",
         message:
-          error instanceof Error ? error.message : "failed to load compare session",
+          error instanceof Error ? error.message : "비교 세션을 불러오지 못했습니다",
       });
     }
   }
@@ -131,8 +131,8 @@ export function LiveComparePage() {
       <main className="landing">
         <section className="connectPanel">
           <div className="panelHeading">
-            <h1>Loading compare session</h1>
-            <p>MoreDiff is building the branch matrix from GitHub.</p>
+            <h1>비교 세션 불러오는 중</h1>
+            <p>MoreDiff가 GitHub에서 브랜치 매트릭스를 구성하고 있습니다.</p>
           </div>
         </section>
       </main>
@@ -144,15 +144,15 @@ export function LiveComparePage() {
       <main className="landing">
         <section className="connectPanel">
           <div className="panelHeading">
-            <h1>Compare session unavailable</h1>
+            <h1>비교 세션을 사용할 수 없습니다</h1>
             <p>{state.message}</p>
           </div>
           <div className="actionsRow">
             <Link href="/connect" className="primaryAction">
-              Connect repository
+              저장소 연결
             </Link>
             <Link href="/compare?mode=demo" className="secondaryAction">
-              Open demo workspace
+              데모 작업 공간 열기
             </Link>
           </div>
         </section>

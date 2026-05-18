@@ -19,7 +19,7 @@ export function getGitHubOAuthConfig(
 
   if (!clientId || !clientSecret) {
     throw new Error(
-      "GitHub OAuth is not configured; set GITHUB_OAUTH_CLIENT_ID and GITHUB_OAUTH_CLIENT_SECRET",
+      "GitHub OAuth가 설정되지 않았습니다. GITHUB_OAUTH_CLIENT_ID와 GITHUB_OAUTH_CLIENT_SECRET을 설정하세요",
     );
   }
 
@@ -51,7 +51,7 @@ export function assertGitHubOAuthState(input: {
   const actualState = input.actualState?.trim() ?? "";
 
   if (!expectedState || !actualState || expectedState !== actualState) {
-    throw new Error("GitHub OAuth state did not match");
+    throw new Error("GitHub OAuth state가 일치하지 않습니다");
   }
 
   return actualState;
@@ -71,5 +71,5 @@ export function selectGitHubAuthToken(input: {
     return cookieToken;
   }
 
-  throw new Error("GitHub authentication is required; sign in or provide a PAT");
+  throw new Error("GitHub 인증이 필요합니다. 로그인하거나 PAT를 입력하세요");
 }

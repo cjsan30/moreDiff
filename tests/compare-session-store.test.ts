@@ -172,7 +172,7 @@ describe("compare session persistence store", () => {
       pullRequests: [
         {
           number: 3,
-          title: "Feature A",
+          title: "기능 A",
           url: "https://github.com/octo/repo/pull/3",
           baseBranch: "main",
           headBranch: "feature/a",
@@ -190,7 +190,7 @@ describe("compare session persistence store", () => {
       sessionId: summary.id,
       branchName: "feature/a",
       filePath: "src/app.ts",
-      body: "Check overlap before merge",
+      body: "병합 전에 겹침을 확인하세요",
       storeFile,
       now: "2026-05-17T00:01:00.000Z",
     });
@@ -243,8 +243,8 @@ describe("compare session persistence store", () => {
         "workspace_edit.saved",
       ]),
     );
-    expect(exported.markdown).toContain("MoreDiff Review Summary");
-    expect(exported.markdown).toContain("Check overlap before merge");
+    expect(exported.markdown).toContain("MoreDiff 리뷰 요약");
+    expect(exported.markdown).toContain("병합 전에 겹침을 확인하세요");
     expect(exported.stats).toMatchObject({
       branches: 2,
       files: 1,
@@ -295,17 +295,17 @@ describe("compare session persistence store", () => {
         sessionId: summary.id,
         storeFile,
       }),
-    ).rejects.toThrow("saved compare session was not found");
+    ).rejects.toThrow("저장된 비교 세션을 찾을 수 없습니다");
     await expect(
       saveReviewNoteForToken({
         token: OTHER_TOKEN,
         sessionId: summary.id,
         branchName: "feature/a",
         filePath: "src/app.ts",
-        body: "unauthorized note",
+        body: "권한 없는 노트",
         storeFile,
       }),
-    ).rejects.toThrow("saved compare session was not found");
+    ).rejects.toThrow("저장된 비교 세션을 찾을 수 없습니다");
   });
 
   it("rejects blank review notes without adding audit records", async () => {
@@ -336,7 +336,7 @@ describe("compare session persistence store", () => {
         body: "   ",
         storeFile,
       }),
-    ).rejects.toThrow("review note body is required");
+    ).rejects.toThrow("리뷰 노트 내용이 필요합니다");
 
     const bundle = await readCompareSessionBundle({
       token: TOKEN,

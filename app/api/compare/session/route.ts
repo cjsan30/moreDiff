@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          error instanceof Error ? error.message : "failed to build compare session",
+          error instanceof Error ? error.message : "비교 세션을 만들지 못했습니다",
       },
       {
         status: error instanceof GitHubRequestError ? error.status : 400,

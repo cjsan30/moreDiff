@@ -27,6 +27,7 @@ interface GitHubRepoResponse {
 interface GitHubCompareResponse {
   files?: Array<{
     filename: string;
+    previous_filename?: string;
     status: "added" | "modified" | "removed" | "renamed";
     additions: number;
     deletions: number;
@@ -264,12 +265,15 @@ export class GitHubClient {
 
         return {
           path: file.filename,
+          basePath: file.previous_filename ?? file.filename,
           status: normalizedStatus,
           additions: file.additions,
           deletions: file.deletions,
-          patch: file.patch ?? "patch unavailable",
+          patch: file.patch ?? "patch를 사용할 수 없습니다",
           content: "",
           contentLoaded: normalizedStatus === "deleted",
+          baseContent: "",
+          baseContentLoaded: false,
         };
       }),
     );
@@ -290,15 +294,15 @@ export class GitHubClient {
     sha: string;
   }): Promise<{ headSha: string; contentSha: string }> {
     if (options.branch.trim().length === 0) {
-      throw new Error("branch is required");
+      throw new Error("브랜치가 필요합니다");
     }
 
     if (options.path.trim().length === 0) {
-      throw new Error("path is required");
+      throw new Error("파일 경로가 필요합니다");
     }
 
     if (options.message.trim().length === 0) {
-      throw new Error("commit message is required");
+      throw new Error("커밋 메시지가 필요합니다");
     }
 
     const response = await this.request<GitHubUpdateContentResponse>(
@@ -398,7 +402,7 @@ function extractGitHubErrorMessage(payload: unknown, fallback: string): string {
     }
   }
 
-  return fallback || "GitHub request failed";
+  return fallback || "GitHub 요청에 실패했습니다";
 }
 
 function mapPullRequestResponse(

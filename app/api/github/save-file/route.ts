@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       expectedHeadSha: body.expectedHeadSha ?? "",
       path: body.path ?? "",
       content: body.content ?? "",
-      message: body.message ?? "Update file from MoreDiff",
+      message: body.message ?? "MoreDiff에서 파일 업데이트",
     });
 
     if (body.sessionId) {
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
           editedContent: body.content ?? "",
         });
       } catch {
-        // GitHub writeback succeeded; persistence audit must not turn it into a failed save.
+        // GitHub 쓰기는 성공했으므로 저장 감사 실패가 파일 저장 실패로 전파되면 안 됩니다.
       }
     }
 
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
   } catch (error) {
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "failed to save branch file",
+        error: error instanceof Error ? error.message : "브랜치 파일을 저장하지 못했습니다",
       },
       {
         status: error instanceof GitHubRequestError ? error.status : 400,

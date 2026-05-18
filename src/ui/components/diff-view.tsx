@@ -16,10 +16,10 @@ export function DiffView({ patch, mode }: DiffViewProps) {
 
   const rows = parseUnifiedPatchForSplitView(patch);
   return (
-    <div className="splitDiffTable" role="table" aria-label="Split diff view">
+    <div className="splitDiffTable" role="table" aria-label="분할 diff 보기">
       <div className="splitDiffHeader" role="row">
-        <span role="columnheader">Base side</span>
-        <span role="columnheader">Compare side</span>
+        <span role="columnheader">기준 코드</span>
+        <span role="columnheader">비교 코드</span>
       </div>
       {rows.map((row, index) => (
         <div

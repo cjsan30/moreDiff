@@ -28,12 +28,12 @@ describe("github connection helpers", () => {
     it("rejects a non-github URL", () => {
       expect(() =>
         parseGitHubRepositoryUrl("https://gitlab.com/openai/codex"),
-      ).toThrow("only github.com repositories are supported");
+      ).toThrow("github.com 저장소만 지원합니다");
     });
 
     it("rejects github.com URLs that are not HTTPS", () => {
       expect(() => parseGitHubRepositoryUrl("http://github.com/openai/codex")).toThrow(
-        "repository URL must use https",
+        "저장소 URL은 https를 사용해야 합니다",
       );
     });
   });
@@ -41,14 +41,14 @@ describe("github connection helpers", () => {
   describe("PAT validation", () => {
     it("requires a plausible PAT token length", () => {
       expect(() => assertPatToken("short-token")).toThrow(
-        "personal access token looks too short",
+        "개인 액세스 토큰이 너무 짧습니다",
       );
     });
 
     it("rejects tokens containing whitespace", () => {
       expect(() =>
         assertPatToken("github_pat_12345678901234567890\nextra"),
-      ).toThrow("personal access token must not contain whitespace");
+      ).toThrow("개인 액세스 토큰에는 공백이 포함될 수 없습니다");
     });
   });
 });

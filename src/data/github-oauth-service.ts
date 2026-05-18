@@ -30,7 +30,7 @@ export async function exchangeGitHubOAuthCode(input: {
   const payload = (await response.json()) as GitHubOAuthTokenResponse;
   if (!response.ok || !payload.access_token) {
     throw new Error(
-      payload.error_description ?? payload.error ?? "GitHub OAuth exchange failed",
+      payload.error_description ?? payload.error ?? "GitHub OAuth 토큰 교환에 실패했습니다",
     );
   }
 

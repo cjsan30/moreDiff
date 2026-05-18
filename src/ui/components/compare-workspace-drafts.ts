@@ -21,6 +21,21 @@ export function buildWorkspaceDraftMap(
   );
 }
 
+export function buildWorkspaceBaseContentMap(
+  session: Pick<CompareSessionViewModel, "branches">,
+): WorkspaceDraftMap {
+  return Object.fromEntries(
+    session.branches.flatMap((branch) =>
+      branch.files
+        .filter((file) => file.baseContentLoaded)
+        .map((file) => [
+          createWorkspaceDraftKey(branch.name, file.path),
+          file.baseContent ?? "",
+        ]),
+    ),
+  );
+}
+
 export function buildLoadedWorkspaceContentKeys(
   session: Pick<CompareSessionViewModel, "branches">,
 ): Set<string> {
@@ -28,6 +43,18 @@ export function buildLoadedWorkspaceContentKeys(
     session.branches.flatMap((branch) =>
       branch.files
         .filter((file) => file.contentLoaded)
+        .map((file) => createWorkspaceDraftKey(branch.name, file.path)),
+    ),
+  );
+}
+
+export function buildLoadedWorkspaceBaseContentKeys(
+  session: Pick<CompareSessionViewModel, "branches">,
+): Set<string> {
+  return new Set(
+    session.branches.flatMap((branch) =>
+      branch.files
+        .filter((file) => file.baseContentLoaded)
         .map((file) => createWorkspaceDraftKey(branch.name, file.path)),
     ),
   );

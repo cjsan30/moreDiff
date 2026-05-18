@@ -23,7 +23,7 @@ export async function GET(request: Request) {
       {
         sessions: [],
         error:
-          error instanceof Error ? error.message : "failed to list saved sessions",
+          error instanceof Error ? error.message : "저장된 세션 목록을 불러오지 못했습니다",
       },
       {
         status: error instanceof GitHubRequestError ? error.status : 400,
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          error instanceof Error ? error.message : "failed to save compare session",
+          error instanceof Error ? error.message : "비교 세션을 저장하지 못했습니다",
       },
       {
         status: error instanceof GitHubRequestError ? error.status : 400,

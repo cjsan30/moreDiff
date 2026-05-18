@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          error instanceof Error ? error.message : "failed to validate GitHub access",
+          error instanceof Error ? error.message : "GitHub 접근 권한 검증에 실패했습니다",
       },
       {
         status: error instanceof GitHubRequestError ? error.status : 400,

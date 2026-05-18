@@ -658,6 +658,23 @@ input {
   color: #991b1b;
 }
 
+.codeComparisonGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.codeComparisonGrid label {
+  display: grid;
+  gap: 8px;
+}
+
+.codeComparisonGrid span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
 .editorCard textarea {
   width: 100%;
   min-height: 240px;
@@ -965,6 +982,10 @@ input {
 
   .recentSessionItem {
     flex-direction: column;
+  }
+
+  .codeComparisonGrid {
+    grid-template-columns: 1fr;
   }
 
   .reviewNotesHeading,

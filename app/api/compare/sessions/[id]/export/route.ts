@@ -29,7 +29,7 @@ export async function GET(
         error:
           error instanceof Error
             ? error.message
-            : "failed to export compare session",
+            : "비교 세션을 내보내지 못했습니다",
       },
       {
         status: error instanceof GitHubRequestError ? error.status : 400,

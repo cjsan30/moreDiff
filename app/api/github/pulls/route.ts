@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       {
         pullRequests: [],
         error:
-          error instanceof Error ? error.message : "failed to list pull requests",
+          error instanceof Error ? error.message : "풀 리퀘스트 목록을 불러오지 못했습니다",
       },
       {
         status: error instanceof GitHubRequestError ? error.status : 400,
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          error instanceof Error ? error.message : "failed to create pull request",
+          error instanceof Error ? error.message : "풀 리퀘스트를 생성하지 못했습니다",
       },
       {
         status: error instanceof GitHubRequestError ? error.status : 400,

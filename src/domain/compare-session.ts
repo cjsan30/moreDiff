@@ -20,7 +20,7 @@ export function createCompareSession(
   const duplicateNames = findDuplicates(branchNames);
   if (duplicateNames.length > 0) {
     throw new Error(
-      `duplicate compare branches are not allowed: ${duplicateNames.join(", ")}`,
+      `중복 비교 브랜치는 허용되지 않습니다: ${duplicateNames.join(", ")}`,
     );
   }
 
@@ -44,7 +44,7 @@ export function validateCompareSessionRequest(input: {
 }): void {
   const baseBranch = input.baseBranch.trim();
   if (baseBranch.length === 0) {
-    throw new Error("base branch is required");
+    throw new Error("기준 브랜치가 필요합니다");
   }
 
   validateBranchCount(input.compareBranches.length);
@@ -52,25 +52,25 @@ export function validateCompareSessionRequest(input: {
   const compareBranches = input.compareBranches.map((branch) => branch.trim());
   const emptyCompareBranch = compareBranches.find((branch) => branch.length === 0);
   if (emptyCompareBranch !== undefined) {
-    throw new Error("compare branches must not be empty");
+    throw new Error("비교 브랜치는 비어 있을 수 없습니다");
   }
 
   const duplicateNames = findDuplicates(compareBranches);
   if (duplicateNames.length > 0) {
     throw new Error(
-      `duplicate compare branches are not allowed: ${duplicateNames.join(", ")}`,
+      `중복 비교 브랜치는 허용되지 않습니다: ${duplicateNames.join(", ")}`,
     );
   }
 
   if (compareBranches.includes(baseBranch)) {
-    throw new Error("base branch cannot be included in compare branches");
+    throw new Error("기준 브랜치는 비교 브랜치에 포함될 수 없습니다");
   }
 }
 
 export function validateBranchCount(count: number): void {
   if (count < MIN_BRANCHES || count > MAX_BRANCHES) {
     throw new Error(
-      `compare sessions require between ${MIN_BRANCHES} and ${MAX_BRANCHES} branches`,
+      `비교 세션은 ${MIN_BRANCHES}개 이상 ${MAX_BRANCHES}개 이하의 브랜치가 필요합니다`,
     );
   }
 }

@@ -52,7 +52,7 @@ describe("github oauth helpers", () => {
         expectedState: "abc",
         actualState: "xyz",
       }),
-    ).toThrow("GitHub OAuth state did not match");
+    ).toThrow("GitHub OAuth state가 일치하지 않습니다");
   });
 
   it("prefers request tokens before oauth cookie tokens", () => {
@@ -69,7 +69,7 @@ describe("github oauth helpers", () => {
       }),
     ).toBe("cookie-token");
     expect(() => selectGitHubAuthToken({})).toThrow(
-      "GitHub authentication is required",
+      "GitHub 인증이 필요합니다",
     );
   });
 });

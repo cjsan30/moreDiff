@@ -251,7 +251,7 @@ export async function markCompareSessionOpenedForToken(input: {
     (candidate) => candidate.id === input.sessionId && candidate.user_id === userId,
   );
   if (!session) {
-    throw new Error("saved compare session was not found");
+    throw new Error("저장된 비교 세션을 찾을 수 없습니다");
   }
 
   state.sessionOpenEvents = state.sessionOpenEvents.filter(
@@ -304,7 +304,7 @@ export async function readCompareSessionBundle(input: {
     (candidate) => candidate.id === input.sessionId && candidate.user_id === userId,
   );
   if (!session) {
-    throw new Error("saved compare session was not found");
+    throw new Error("저장된 비교 세션을 찾을 수 없습니다");
   }
 
   return {
@@ -347,7 +347,7 @@ export async function saveReviewNoteForToken(
 ): Promise<ReviewNote> {
   const body = input.body.trim();
   if (!body) {
-    throw new Error("review note body is required");
+    throw new Error("리뷰 노트 내용이 필요합니다");
   }
 
   const { state, session, userId } = await readOwnedSessionState(input);
@@ -509,7 +509,7 @@ async function readOwnedSessionState(input: {
     (candidate) => candidate.id === input.sessionId && candidate.user_id === userId,
   );
   if (!session) {
-    throw new Error("saved compare session was not found");
+    throw new Error("저장된 비교 세션을 찾을 수 없습니다");
   }
 
   return {
@@ -611,7 +611,7 @@ function summarizeSession(
     (candidate) => candidate.id === sessionId,
   );
   if (!session) {
-    throw new Error("saved compare session was not found");
+    throw new Error("저장된 비교 세션을 찾을 수 없습니다");
   }
 
   const branches = state.sessionBranches
@@ -704,18 +704,18 @@ function buildExportMarkdown(bundle: CompareSessionBundle, overlapFiles: number)
   }
 
   const lines = [
-    `# MoreDiff Review Summary`,
+    "# MoreDiff 리뷰 요약",
     "",
-    `Repository: ${session.repo_owner}/${session.repo_name}`,
-    `Base branch: ${session.base_branch}`,
-    `Compare branches: ${branches.map((branch) => branch.branch_name).join(", ")}`,
-    `Changed files: ${filesByPath.size}`,
-    `Overlap files: ${overlapFiles}`,
+    `저장소: ${session.repo_owner}/${session.repo_name}`,
+    `기준 브랜치: ${session.base_branch}`,
+    `비교 브랜치: ${branches.map((branch) => branch.branch_name).join(", ")}`,
+    `변경 파일: ${filesByPath.size}`,
+    `겹침 파일: ${overlapFiles}`,
     "",
   ];
 
   if (bundle.pullRequests.length > 0) {
-    lines.push("## Imported Pull Requests", "");
+    lines.push("## 가져온 풀 리퀘스트", "");
     for (const pullRequest of bundle.pullRequests.sort(
       (left, right) => left.number - right.number,
     )) {
@@ -726,7 +726,7 @@ function buildExportMarkdown(bundle: CompareSessionBundle, overlapFiles: number)
     lines.push("");
   }
 
-  lines.push("## File Matrix", "");
+  lines.push("## 파일 매트릭스", "");
   for (const [filePath, entries] of [...filesByPath.entries()].sort((left, right) =>
     left[0].localeCompare(right[0]),
   )) {
@@ -734,7 +734,7 @@ function buildExportMarkdown(bundle: CompareSessionBundle, overlapFiles: number)
       .sort((left, right) => left.branch_name.localeCompare(right.branch_name))
       .map(
         (entry) =>
-          `${entry.branch_name} ${entry.status} (+${entry.additions}/-${entry.deletions})`,
+          `${entry.branch_name} ${formatStoredFileStatus(entry.status)} (+${entry.additions}/-${entry.deletions})`,
       )
       .join("; ");
     lines.push(`- ${filePath}: ${touchedBranches}`);
@@ -742,19 +742,32 @@ function buildExportMarkdown(bundle: CompareSessionBundle, overlapFiles: number)
   lines.push("");
 
   if (bundle.reviewNotes.length > 0) {
-    lines.push("## Review Notes", "");
+    lines.push("## 리뷰 노트", "");
     for (const note of bundle.reviewNotes.sort((left, right) =>
       left.filePath.localeCompare(right.filePath),
     )) {
       const lineRef = note.lineNumber ? `:${note.lineNumber}` : "";
       lines.push(
-        `- [${note.status}] ${note.filePath}${lineRef} (${note.branchName}): ${note.body}`,
+        `- [${note.status === "resolved" ? "해결됨" : "열림"}] ${note.filePath}${lineRef} (${note.branchName}): ${note.body}`,
       );
     }
     lines.push("");
   }
 
   return `${lines.join("\n").trim()}\n`;
+}
+
+function formatStoredFileStatus(status: FileDiffRecord["status"]) {
+  switch (status) {
+    case "added":
+      return "추가됨";
+    case "modified":
+      return "수정됨";
+    case "deleted":
+      return "삭제됨";
+    case "renamed":
+      return "이름 변경됨";
+  }
 }
 
 function isMissingFileError(error: unknown) {

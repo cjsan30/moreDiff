@@ -2,12 +2,15 @@ export type FileStatus = "added" | "modified" | "deleted" | "renamed";
 
 export interface BranchDiffFile {
   path: string;
+  basePath?: string;
   status: FileStatus;
   additions: number;
   deletions: number;
   patch: string;
   content: string;
   contentLoaded: boolean;
+  baseContent?: string;
+  baseContentLoaded?: boolean;
 }
 
 export interface CompareBranch {

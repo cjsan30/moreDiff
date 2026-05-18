@@ -15,7 +15,7 @@ export async function GET() {
       {
         authenticated: false,
         error:
-          error instanceof Error ? error.message : "GitHub OAuth session unavailable",
+          error instanceof Error ? error.message : "GitHub OAuth 세션을 사용할 수 없습니다",
       },
       {
         status: error instanceof GitHubRequestError ? error.status : 200,

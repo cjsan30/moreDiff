@@ -5,21 +5,21 @@ import {
   extractOpenAIResponseText,
 } from "@/src/data/ai-summary-service";
 
-const MARKDOWN = `# MoreDiff Review Summary
+const MARKDOWN = `# MoreDiff 리뷰 요약
 
-Repository: octo/repo
-Base branch: main
-Compare branches: feature/a, feature/b
-Changed files: 2
-Overlap files: 1
+저장소: octo/repo
+기준 브랜치: main
+비교 브랜치: feature/a, feature/b
+변경 파일: 2
+겹침 파일: 1
 
-## File Matrix
+## 파일 매트릭스
 
 - src/app.ts: feature/a modified (+1/-1); feature/b modified (+2/-0)
 
-## Review Notes
+## 리뷰 노트
 
-- [open] src/app.ts (feature/a): Check overlap before merge
+- [열림] src/app.ts (feature/a): 병합 전에 겹침을 확인하세요
 `;
 
 describe("AI review summary service", () => {
@@ -35,7 +35,7 @@ describe("AI review summary service", () => {
     ).resolves.toMatchObject({
       source: "deterministic",
       model: "gpt-5.4-mini",
-      fallbackReason: "OPENAI_API_KEY is not configured",
+      fallbackReason: "OPENAI_API_KEY가 설정되지 않았습니다",
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -89,7 +89,7 @@ describe("AI review summary service", () => {
       Response.json(
         {
           error: {
-            message: "bad key",
+            message: "잘못된 키",
           },
         },
         {
@@ -109,7 +109,7 @@ describe("AI review summary service", () => {
     expect(result).toMatchObject({
       source: "deterministic",
       model: "gpt-5",
-      fallbackReason: "OpenAI summary request failed with 401",
+      fallbackReason: "OpenAI 요약 요청이 401 상태로 실패했습니다",
     });
     expect(JSON.stringify(result)).not.toContain(secret);
   });

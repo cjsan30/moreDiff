@@ -218,14 +218,14 @@ export function PatConnectionForm() {
 
       return payload.session ?? null;
     } catch {
-      // Local session metadata remains usable even if server persistence is unavailable.
+      // 서버 저장이 불가능해도 로컬 세션 메타데이터는 계속 사용할 수 있습니다.
       return null;
     }
   }
 
   async function handleLoadPullRequests() {
     if (!result) {
-      setPullRequestError("validate repository access before loading pull requests");
+      setPullRequestError("풀 리퀘스트를 불러오기 전에 저장소 접근 권한을 확인하세요");
       return;
     }
 
@@ -247,7 +247,7 @@ export function PatConnectionForm() {
       });
       const payload = (await response.json()) as PullRequestsResult;
       if (!response.ok) {
-        throw new Error(payload.error ?? "failed to load pull requests");
+        throw new Error(payload.error ?? "풀 리퀘스트를 불러오지 못했습니다");
       }
 
       setPullRequests(payload.pullRequests);
@@ -260,7 +260,7 @@ export function PatConnectionForm() {
       setPullRequestError(
         caughtError instanceof Error
           ? caughtError.message
-          : "failed to load pull requests",
+          : "풀 리퀘스트를 불러오지 못했습니다",
       );
     } finally {
       setIsLoadingPullRequests(false);
@@ -270,7 +270,7 @@ export function PatConnectionForm() {
   function togglePullRequest(pullRequest: ImportedPullRequest) {
     if (!pullRequest.isSameRepository) {
       setPullRequestError(
-        "Fork pull requests can be reviewed from GitHub, but branch writeback is limited to same-repository branches.",
+        "포크 풀 리퀘스트는 GitHub에서 확인할 수 있지만, 브랜치 저장은 같은 저장소 브랜치로 제한됩니다.",
       );
       return;
     }
@@ -307,11 +307,11 @@ export function PatConnectionForm() {
       sameRepositoryPullRequests.length < 2 ||
       sameRepositoryPullRequests.length > 6
     ) {
-      setPullRequestError("select between 2 and 6 same-repository pull requests");
+      setPullRequestError("같은 저장소의 풀 리퀘스트를 2개 이상 6개 이하로 선택하세요");
       return;
     }
     if (uniqueBaseBranches.size !== 1) {
-      setPullRequestError("selected pull requests must share one base branch");
+      setPullRequestError("선택한 풀 리퀘스트는 하나의 기준 브랜치를 공유해야 합니다");
       return;
     }
 
@@ -327,7 +327,7 @@ export function PatConnectionForm() {
       );
     if (nextCompareBranches.length !== sameRepositoryPullRequests.length) {
       setPullRequestError(
-        "all selected PR head branches must still exist in the repository",
+        "선택한 PR의 헤드 브랜치가 모두 저장소에 존재해야 합니다",
       );
       return;
     }
@@ -339,7 +339,7 @@ export function PatConnectionForm() {
 
   async function handleLoadRepositories() {
     if (!hasGitHubAuthentication) {
-      setError("sign in with GitHub or enter a PAT first");
+      setError("먼저 GitHub로 로그인하거나 PAT를 입력하세요");
       return;
     }
 
@@ -360,7 +360,7 @@ export function PatConnectionForm() {
 
       const payload = (await response.json()) as ConnectionProbeResult;
       if (!response.ok) {
-        throw new Error(payload.error ?? "failed to load repositories");
+        throw new Error(payload.error ?? "저장소를 불러오지 못했습니다");
       }
 
       setLoadedViewerLogin(payload.viewerLogin);
@@ -373,7 +373,7 @@ export function PatConnectionForm() {
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : "repository loading failed",
+          : "저장소 불러오기에 실패했습니다",
       );
     } finally {
       setIsLoadingRepositories(false);
@@ -382,7 +382,7 @@ export function PatConnectionForm() {
 
   async function handleValidate() {
     if (!hasGitHubAuthentication) {
-      setError("sign in with GitHub or enter a PAT first");
+      setError("먼저 GitHub로 로그인하거나 PAT를 입력하세요");
       return;
     }
 
@@ -405,10 +405,10 @@ export function PatConnectionForm() {
       const payload = (await response.json()) as ConnectionProbeResult;
 
       if (!response.ok) {
-        throw new Error(payload.error ?? "failed to validate token");
+        throw new Error(payload.error ?? "토큰 검증에 실패했습니다");
       }
       if (!payload.repository) {
-        throw new Error("select a repository before validating access");
+        throw new Error("접근 권한을 확인하기 전에 저장소를 선택하세요");
       }
       const validationResult: ValidationResult = {
         viewerLogin: payload.viewerLogin,
@@ -438,7 +438,7 @@ export function PatConnectionForm() {
       }
     } catch (caughtError) {
       setError(
-        caughtError instanceof Error ? caughtError.message : "validation failed",
+        caughtError instanceof Error ? caughtError.message : "검증에 실패했습니다",
       );
     } finally {
       setIsSubmitting(false);
@@ -465,7 +465,7 @@ export function PatConnectionForm() {
     }
 
     if (selectedBranches.length < 2 || selectedBranches.length > 6) {
-      setError("select between 2 and 6 compare branches");
+      setError("비교 브랜치를 2개 이상 6개 이하로 선택하세요");
       return;
     }
 
@@ -526,7 +526,7 @@ export function PatConnectionForm() {
 
   async function handleReopenRecentSession(session: RecentCompareSession) {
     if (!hasGitHubAuthentication) {
-      setError("sign in with GitHub or enter a PAT before reopening a saved session");
+      setError("저장된 세션을 다시 열기 전에 GitHub로 로그인하거나 PAT를 입력하세요");
       return;
     }
 
@@ -593,10 +593,11 @@ export function PatConnectionForm() {
   return (
     <section className="connectPanel">
       <div className="panelHeading">
-        <h1>Connect GitHub</h1>
+        <h1>GitHub 연결</h1>
         <p>
-          Sign in with GitHub OAuth or use a fine-grained PAT fallback. Saved
-          compare sessions keep repository and branch metadata only, not tokens.
+          GitHub OAuth로 로그인하거나 fine-grained PAT를 대체 수단으로 사용할 수
+          있습니다. 저장된 비교 세션에는 토큰이 아니라 저장소와 브랜치 메타데이터만
+          보관됩니다.
         </p>
       </div>
 
@@ -605,10 +606,10 @@ export function PatConnectionForm() {
           <h2>GitHub OAuth</h2>
           <p>
             {oauthViewerLogin
-              ? `Signed in as ${oauthViewerLogin}.`
+              ? `${oauthViewerLogin} 계정으로 로그인했습니다.`
               : isCheckingOAuth
-                ? "Checking GitHub OAuth session..."
-                : "Recommended for reopening sessions without storing tokens in the browser."}
+                ? "GitHub OAuth 세션을 확인하는 중입니다..."
+                : "브라우저에 토큰을 저장하지 않고 세션을 다시 열 때 권장됩니다."}
           </p>
         </div>
         <div className="authActions">
@@ -618,11 +619,11 @@ export function PatConnectionForm() {
               className="secondaryButton"
               onClick={handleDisconnectOAuth}
             >
-              Disconnect
+              연결 해제
             </button>
           ) : (
             <a className="primaryAction" href="/api/github/oauth/start">
-              Sign in with GitHub
+              GitHub로 로그인
             </a>
           )}
         </div>
@@ -632,10 +633,10 @@ export function PatConnectionForm() {
         <section className="recentSessionsCard">
           <div className="recentSessionsHeading">
             <div>
-              <h2>Recent compare sessions</h2>
+              <h2>최근 비교 세션</h2>
               <p>
-                Reopen saved repository and branch metadata with OAuth or the PAT
-                you enter. Tokens are not stored in saved sessions.
+                OAuth 또는 입력한 PAT로 저장된 저장소와 브랜치 메타데이터를 다시
+                엽니다. 저장된 세션에는 토큰이 보관되지 않습니다.
               </p>
             </div>
           </div>
@@ -648,14 +649,14 @@ export function PatConnectionForm() {
                   <div className="recentSessionMeta">
                     <strong>{session.repoUrl}</strong>
                     <span>
-                      Base <strong>{session.baseBranch}</strong>
+                      기준 <strong>{session.baseBranch}</strong>
                     </span>
                     <span>
-                      Compare <strong>{session.compareBranches.join(", ")}</strong>
+                      비교 <strong>{session.compareBranches.join(", ")}</strong>
                     </span>
                     {session.pullRequests.length > 0 ? (
                       <span>
-                        PRs{" "}
+                        PR{" "}
                         <strong>
                           {session.pullRequests
                             .map((pullRequest) => `#${pullRequest.number}`)
@@ -664,11 +665,11 @@ export function PatConnectionForm() {
                       </span>
                     ) : null}
                     <time dateTime={session.savedAt}>
-                      Saved {formatSavedAt(session.savedAt)}
+                      저장됨 {formatSavedAt(session.savedAt)}
                     </time>
                     {session.lastOpenedAt ? (
                       <time dateTime={session.lastOpenedAt}>
-                        Opened {formatSavedAt(session.lastOpenedAt)}
+                        열림 {formatSavedAt(session.lastOpenedAt)}
                       </time>
                     ) : null}
                   </div>
@@ -678,21 +679,21 @@ export function PatConnectionForm() {
                       className="primaryMiniButton"
                       onClick={() => handleReopenRecentSession(session)}
                     >
-                      Reopen
+                      다시 열기
                     </button>
                     <button
                       type="button"
                       className="secondaryButton"
                       onClick={() => handleReuseRecentSession(session)}
                     >
-                      {isPending ? "Selected for validation" : "Reuse shape"}
+                      {isPending ? "검증 대상으로 선택됨" : "구성 재사용"}
                     </button>
                     <button
                       type="button"
                       className="dangerButton"
                       onClick={() => handleRemoveRecentSession(session.id)}
                     >
-                      Remove
+                      삭제
                     </button>
                   </div>
                 </article>
@@ -718,19 +719,19 @@ export function PatConnectionForm() {
           onClick={handleLoadRepositories}
           disabled={isLoadingRepositories}
         >
-          {isLoadingRepositories ? "Loading repositories..." : "Load repositories"}
+          {isLoadingRepositories ? "저장소 불러오는 중..." : "저장소 불러오기"}
         </button>
       </div>
 
       {loadedViewerLogin ? (
         <p className="hintText">
-          Repository access loaded for <strong>{loadedViewerLogin}</strong>.
+          <strong>{loadedViewerLogin}</strong> 계정의 저장소 접근 권한을 불러왔습니다.
         </p>
       ) : null}
 
       {repositoryOptions.length > 0 ? (
         <label className="formField">
-          <span>Accessible repositories</span>
+          <span>접근 가능한 저장소</span>
           <select
             value={repoUrl}
             onChange={(event) => {
@@ -743,7 +744,7 @@ export function PatConnectionForm() {
             {repositoryOptions.map((repository) => (
               <option key={repository.fullName} value={repository.url}>
                 {repository.fullName}
-                {repository.isPrivate ? " (private)" : ""}
+                {repository.isPrivate ? " (비공개)" : ""}
               </option>
             ))}
           </select>
@@ -751,7 +752,7 @@ export function PatConnectionForm() {
       ) : null}
 
       <label className="formField">
-        <span>Repository URL</span>
+        <span>저장소 URL</span>
         <input
           placeholder="https://github.com/owner/repository"
           value={repoUrl}
@@ -766,10 +767,10 @@ export function PatConnectionForm() {
 
       <div className="actionsRow">
         <button type="button" onClick={handleValidate} disabled={isSubmitting}>
-          {isSubmitting ? "Validating..." : "Validate access"}
+          {isSubmitting ? "검증 중..." : "접근 권한 검증"}
         </button>
         <Link href="/compare?mode=demo" className="secondaryAction">
-          Open demo workspace
+          데모 작업 공간 열기
         </Link>
       </div>
 
@@ -777,29 +778,29 @@ export function PatConnectionForm() {
 
       {result ? (
         <div className="resultCard">
-          <h2>Connection validated</h2>
+          <h2>연결이 검증되었습니다</h2>
           <p>
-            Signed in as <strong>{result.viewerLogin}</strong>
+            <strong>{result.viewerLogin}</strong> 계정으로 로그인했습니다
           </p>
           <p>
-            Repository:{" "}
+            저장소:{" "}
             <strong>
               {result.repository.owner}/{result.repository.name}
             </strong>
           </p>
           <p>
-            Default branch: <strong>{result.repository.defaultBranch}</strong>
+            기본 브랜치: <strong>{result.repository.defaultBranch}</strong>
           </p>
           <p>
-            Visible branches loaded: <strong>{result.branches.length}</strong>
+            불러온 브랜치: <strong>{result.branches.length}</strong>
           </p>
           <section className="pullRequestImportCard">
             <div className="pullRequestImportHeading">
               <div>
-                <h3>Import pull requests</h3>
+                <h3>풀 리퀘스트 가져오기</h3>
                 <p>
-                  Select 2 to 6 same-repository PRs to auto-fill the shared base
-                  branch and compare branches from current PR heads.
+                  같은 저장소의 PR을 2개에서 6개까지 선택하면 현재 PR 헤드를 기준으로
+                  공통 기준 브랜치와 비교 브랜치가 자동 입력됩니다.
                 </p>
               </div>
               <div className="pullRequestActions">
@@ -809,14 +810,14 @@ export function PatConnectionForm() {
                   onClick={handleLoadPullRequests}
                   disabled={isLoadingPullRequests}
                 >
-                  {isLoadingPullRequests ? "Refreshing PRs..." : "Load / refresh PRs"}
+                  {isLoadingPullRequests ? "PR 새로고침 중..." : "PR 불러오기 / 새로고침"}
                 </button>
                 <button
                   type="button"
                   onClick={applySelectedPullRequests}
                   disabled={selectedPullRequestNumbers.length < 2}
                 >
-                  Apply selected PRs
+                  선택한 PR 적용
                 </button>
               </div>
             </div>
@@ -849,7 +850,7 @@ export function PatConnectionForm() {
                       </span>
                       <small>
                         {pullRequest.headBranch} {"->"} {pullRequest.baseBranch}
-                        {pullRequest.isSameRepository ? "" : " - fork read-only"}
+                        {pullRequest.isSameRepository ? "" : " - 포크 읽기 전용"}
                       </small>
                     </label>
                   );
@@ -857,21 +858,19 @@ export function PatConnectionForm() {
               </div>
             ) : (
               <p className="hintText">
-                Load open PRs when you want the session shape to follow GitHub PR
-                heads.
+                세션 구성을 GitHub PR 헤드에 맞추려면 열린 PR을 불러오세요.
               </p>
             )}
           </section>
           {pendingRecentSessionId ? (
             <p className="hintText">
-              A recent session shape was applied where matching branches were
-              available.
+              일치하는 브랜치가 있는 범위에서 최근 세션 구성이 적용되었습니다.
             </p>
           ) : null}
 
           <div className="branchConfig">
             <label className="formField">
-              <span>Base branch</span>
+              <span>기준 브랜치</span>
               <select
                 value={baseBranch}
                 onChange={(event) => {
@@ -891,9 +890,9 @@ export function PatConnectionForm() {
             </label>
 
             <div className="formField">
-              <span>Compare branches</span>
+              <span>비교 브랜치</span>
               <p className="hintText">
-                Select between 2 and 6 compare branches.
+                비교 브랜치를 2개 이상 6개 이하로 선택하세요.
               </p>
               <div className="branchList">
                 {compareBranchOptions.map((branch) => {
@@ -918,7 +917,7 @@ export function PatConnectionForm() {
                 onClick={handleLaunchLiveCompare}
                 disabled={isLaunching}
               >
-                {isLaunching ? "Opening..." : "Open live compare"}
+                {isLaunching ? "여는 중..." : "실시간 비교 열기"}
               </button>
             </div>
           </div>
@@ -965,10 +964,10 @@ function applySessionShape(
 function formatSavedAt(savedAt: string) {
   const date = new Date(savedAt);
   if (Number.isNaN(date.getTime())) {
-    return "recently";
+    return "최근";
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat("ko-KR", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);

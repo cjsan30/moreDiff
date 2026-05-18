@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         error:
-          error instanceof Error ? error.message : "failed to start GitHub OAuth",
+          error instanceof Error ? error.message : "GitHub OAuth를 시작하지 못했습니다",
       },
       {
         status: 501,

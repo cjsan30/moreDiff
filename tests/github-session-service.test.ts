@@ -35,7 +35,7 @@ describe("github session service validation", () => {
         baseBranch: "   ",
         compareBranches: ["feature/a", "feature/b"],
       }),
-    ).rejects.toThrow("base branch is required");
+    ).rejects.toThrow("기준 브랜치가 필요합니다");
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -104,7 +104,7 @@ describe("github session service validation", () => {
         baseBranch: "main",
         compareBranches: ["feature/a", "feature/a"],
       }),
-    ).rejects.toThrow("duplicate compare branches are not allowed");
+    ).rejects.toThrow("중복 비교 브랜치는 허용되지 않습니다");
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -114,7 +114,7 @@ describe("github session service validation", () => {
       Response.json([
         {
           number: 7,
-          title: "Feature A",
+          title: "기능 A",
           state: "open",
           html_url: "https://github.com/openai/codex/pull/7",
           updated_at: "2026-05-17T00:00:00Z",
@@ -147,7 +147,7 @@ describe("github session service validation", () => {
     ).resolves.toEqual([
       {
         number: 7,
-        title: "Feature A",
+        title: "기능 A",
         state: "open",
         url: "https://github.com/openai/codex/pull/7",
         baseBranch: "main",
@@ -179,7 +179,7 @@ describe("github session service validation", () => {
         baseBranch: "main",
         headBranch: "feature/a",
       }),
-    ).rejects.toThrow("pull request title is required");
+    ).rejects.toThrow("풀 리퀘스트 제목이 필요합니다");
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -192,11 +192,11 @@ describe("github session service validation", () => {
       createPullRequestOnGitHub({
         token: VALID_TOKEN,
         repoUrl: VALID_REPO_URL,
-        title: "Open PR",
+        title: "PR 열기",
         baseBranch: "main",
         headBranch: "main",
       }),
-    ).rejects.toThrow("pull request head branch must differ from base branch");
+    ).rejects.toThrow("풀 리퀘스트 헤드 브랜치는 기준 브랜치와 달라야 합니다");
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -205,7 +205,7 @@ describe("github session service validation", () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(
       Response.json({
         number: 7,
-        title: "Updated title",
+        title: "수정된 제목",
         state: "open",
         html_url: "https://github.com/openai/codex/pull/7",
         updated_at: "2026-05-17T01:00:00Z",
@@ -234,11 +234,11 @@ describe("github session service validation", () => {
         token: VALID_TOKEN,
         repoUrl: VALID_REPO_URL,
         pullNumber: 7,
-        title: "Updated title",
+        title: "수정된 제목",
       }),
     ).resolves.toMatchObject({
       number: 7,
-      title: "Updated title",
+      title: "수정된 제목",
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -260,7 +260,7 @@ describe("github session service validation", () => {
         baseBranch: "main",
         compareBranches: ["feature/a", "main"],
       }),
-    ).rejects.toThrow("base branch cannot be included in compare branches");
+    ).rejects.toThrow("기준 브랜치는 비교 브랜치에 포함될 수 없습니다");
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -413,6 +413,13 @@ describe("github session service validation", () => {
           content: Buffer.from("loaded content").toString("base64"),
           encoding: "base64",
         }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          sha: "base-blob-123",
+          content: Buffer.from("base content").toString("base64"),
+          encoding: "base64",
+        }),
       );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -422,14 +429,60 @@ describe("github session service validation", () => {
         repoUrl: VALID_REPO_URL,
         ...VALID_SAVE_CONTEXT,
         path: "src/app.ts",
+        status: "modified",
       }),
     ).resolves.toEqual({
+      baseContent: "base content",
+      baseContentSha: "base-blob-123",
       content: "loaded content",
       contentSha: "blob-123",
       headSha: "head-123",
     });
 
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("returns empty base code for added files without reading the base branch", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          name: "feature/a",
+          commit: {
+            sha: "head-123",
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          sha: "blob-added",
+          content: Buffer.from("new content").toString("base64"),
+          encoding: "base64",
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      loadBranchFileContentFromGitHub({
+        token: VALID_TOKEN,
+        repoUrl: VALID_REPO_URL,
+        ...VALID_SAVE_CONTEXT,
+        path: "src/new.ts",
+        status: "added",
+      }),
+    ).resolves.toMatchObject({
+      baseContent: "",
+      baseContentSha: "",
+      content: "new content",
+      contentSha: "blob-added",
+    });
+
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(
+      fetchMock.mock.calls.some(([url]) =>
+        String(url).includes("ref=main"),
+      ),
+    ).toBe(false);
   });
 
   it("rejects save requests without a branch before GitHub calls", async () => {
@@ -446,7 +499,7 @@ describe("github session service validation", () => {
         content: "console.log('hi')",
         message: "Update app",
       }),
-    ).rejects.toThrow("branch is required");
+    ).rejects.toThrow("브랜치가 필요합니다");
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -465,7 +518,7 @@ describe("github session service validation", () => {
         content: "console.log('hi')",
         message: "Update app",
       }),
-    ).rejects.toThrow("path is required");
+    ).rejects.toThrow("파일 경로가 필요합니다");
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -484,7 +537,7 @@ describe("github session service validation", () => {
         content: "leak",
         message: "Update app",
       }),
-    ).rejects.toThrow("path must not contain parent directory segments");
+    ).rejects.toThrow("파일 경로에는 상위 디렉터리 구간이 포함될 수 없습니다");
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -503,7 +556,7 @@ describe("github session service validation", () => {
         content: "leak",
         message: "Update app",
       }),
-    ).rejects.toThrow("path must be relative to the repository root");
+    ).rejects.toThrow("파일 경로는 저장소 루트 기준 상대 경로여야 합니다");
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -522,7 +575,7 @@ describe("github session service validation", () => {
         content: "console.log('hi')",
         message: "   ",
       }),
-    ).rejects.toThrow("commit message is required");
+    ).rejects.toThrow("커밋 메시지가 필요합니다");
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -542,7 +595,7 @@ describe("github session service validation", () => {
         content: "console.log('hi')",
         message: "Update app",
       }),
-    ).rejects.toThrow("cannot save changes to the base branch");
+    ).rejects.toThrow("기준 브랜치에는 변경사항을 저장할 수 없습니다");
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -561,7 +614,7 @@ describe("github session service validation", () => {
         content: "console.log('hi')",
         message: "Update app",
       }),
-    ).rejects.toThrow("save branch must be one of the compare branches");
+    ).rejects.toThrow("저장 대상 브랜치는 비교 브랜치 중 하나여야 합니다");
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -580,7 +633,7 @@ describe("github session service validation", () => {
         content: "console.log('hi')",
         message: "Update app",
       }),
-    ).rejects.toThrow("expected branch head SHA is required");
+    ).rejects.toThrow("예상 브랜치 HEAD SHA가 필요합니다");
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -605,7 +658,7 @@ describe("github session service validation", () => {
         content: "console.log('hi')",
         message: "Update app",
       }),
-    ).rejects.toThrow("branch head changed; reload compare session before saving");
+    ).rejects.toThrow("브랜치 HEAD가 변경되었습니다. 저장하기 전에 비교 세션을 다시 불러오세요");
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
