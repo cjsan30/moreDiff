@@ -45,6 +45,13 @@ interface OAuthSessionResult {
   error?: string;
 }
 
+interface OAuthConfigResult {
+  configured: boolean;
+  callbackUrl: string;
+  requiredEnv: string[];
+  error?: string;
+}
+
 interface PersistedCompareSessionsResult {
   sessions: RecentCompareSession[];
   error?: string;
@@ -69,8 +76,11 @@ interface RepositoryOption {
   defaultBranch: string;
 }
 
+type AuthMode = "oauth" | "pat";
+
 export function PatConnectionForm() {
   const router = useRouter();
+  const [authMode, setAuthMode] = useState<AuthMode>("oauth");
   const [repoUrl, setRepoUrl] = useState("");
   const [token, setToken] = useState("");
   const [result, setResult] = useState<ValidationResult | null>(null);
@@ -80,9 +90,11 @@ export function PatConnectionForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRepositories, setIsLoadingRepositories] = useState(false);
   const [isCheckingOAuth, setIsCheckingOAuth] = useState(false);
+  const [isOAuthSetupOpen, setIsOAuthSetupOpen] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
   const [loadedViewerLogin, setLoadedViewerLogin] = useState("");
   const [oauthViewerLogin, setOauthViewerLogin] = useState("");
+  const [oauthConfig, setOauthConfig] = useState<OAuthConfigResult | null>(null);
   const [repositoryOptions, setRepositoryOptions] = useState<RepositoryOption[]>(
     [],
   );
@@ -108,6 +120,7 @@ export function PatConnectionForm() {
 
   useEffect(() => {
     setRecentSessions(readRecentCompareSessions());
+    void loadOAuthConfig();
     void hydrateOAuthSession();
   }, []);
 
@@ -130,6 +143,39 @@ export function PatConnectionForm() {
 
   const hasGitHubAuthentication =
     token.trim().length > 0 || oauthViewerLogin.trim().length > 0;
+
+  async function loadOAuthConfig() {
+    try {
+      const response = await fetch("/api/github/oauth/config", {
+        cache: "no-store",
+      });
+      const payload = (await response.json()) as OAuthConfigResult;
+      if (!response.ok) {
+        throw new Error(payload.error ?? "GitHub OAuth 설정을 확인하지 못했습니다");
+      }
+
+      setOauthConfig(payload);
+      setIsOAuthSetupOpen(!payload.configured);
+    } catch {
+      setOauthConfig({
+        configured: false,
+        callbackUrl: `${window.location.origin}/api/github/oauth/callback`,
+        requiredEnv: ["GITHUB_OAUTH_CLIENT_ID", "GITHUB_OAUTH_CLIENT_SECRET"],
+      });
+      setIsOAuthSetupOpen(true);
+    }
+  }
+
+  function handleOAuthLoginClick() {
+    if (!oauthConfig?.configured) {
+      setAuthMode("oauth");
+      setError("");
+      setIsOAuthSetupOpen(true);
+      return;
+    }
+
+    window.location.href = "/api/github/oauth/start";
+  }
 
   async function hydrateOAuthSession() {
     setIsCheckingOAuth(true);
@@ -601,33 +647,113 @@ export function PatConnectionForm() {
         </p>
       </div>
 
-      <section className="authCard">
-        <div>
-          <h2>GitHub OAuth</h2>
-          <p>
-            {oauthViewerLogin
-              ? `${oauthViewerLogin} 계정으로 로그인했습니다.`
-              : isCheckingOAuth
-                ? "GitHub OAuth 세션을 확인하는 중입니다..."
-                : "브라우저에 토큰을 저장하지 않고 세션을 다시 열 때 권장됩니다."}
-          </p>
-        </div>
-        <div className="authActions">
-          {oauthViewerLogin ? (
-            <button
-              type="button"
-              className="secondaryButton"
-              onClick={handleDisconnectOAuth}
+      <div className="authTabs" role="tablist" aria-label="GitHub 인증 방식">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={authMode === "oauth"}
+          className={authMode === "oauth" ? "active" : ""}
+          onClick={() => setAuthMode("oauth")}
+        >
+          GitHub로 로그인
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={authMode === "pat"}
+          className={authMode === "pat" ? "active" : ""}
+          onClick={() => setAuthMode("pat")}
+        >
+          PAT로 직접 연결
+        </button>
+      </div>
+
+      {authMode === "oauth" ? (
+        <section className="authCard">
+          <div>
+            <h2>GitHub OAuth</h2>
+            <p>
+              {oauthViewerLogin
+                ? `${oauthViewerLogin} 계정으로 로그인했습니다.`
+                : isCheckingOAuth
+                  ? "GitHub OAuth 세션을 확인하는 중입니다..."
+                  : oauthConfig?.configured
+                    ? "PAT를 직접 입력하지 않고 GitHub 인증 세션으로 저장소를 불러옵니다."
+                    : "OAuth 앱 설정이 아직 없어 로그인 대신 설정 안내를 먼저 보여줍니다."}
+            </p>
+          </div>
+          <div className="authActions">
+            {oauthViewerLogin ? (
+              <button
+                type="button"
+                className="secondaryButton"
+                onClick={handleDisconnectOAuth}
+              >
+                연결 해제
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="primaryMiniButton"
+                onClick={handleOAuthLoginClick}
+              >
+                GitHub로 로그인
+              </button>
+            )}
+          </div>
+        </section>
+      ) : (
+        <section className="authCard patAuthCard">
+          <div>
+            <h2>PAT로 직접 연결</h2>
+            <p>
+              로컬 테스트나 OAuth 설정 전에는 fine-grained PAT와 저장소 URL만으로
+              브랜치 비교를 시작할 수 있습니다. PAT는 저장하지 않습니다.
+            </p>
+          </div>
+          <label className="formField inlineFormField">
+            <span>Fine-grained PAT</span>
+            <input
+              placeholder="github_pat_..."
+              type="password"
+              value={token}
+              onChange={(event) => setToken(event.target.value)}
+            />
+          </label>
+        </section>
+      )}
+
+      {authMode === "oauth" && isOAuthSetupOpen && !oauthConfig?.configured ? (
+        <section className="oauthSetupCard">
+          <div>
+            <h3>OAuth 설정이 필요합니다</h3>
+            <p>
+              GitHub OAuth App을 만든 뒤 아래 callback URL과 환경 변수를
+              설정하면 `GitHub로 로그인` 버튼이 실제 로그인으로 연결됩니다.
+            </p>
+          </div>
+          <label>
+            <span>GitHub OAuth callback URL</span>
+            <code>{oauthConfig?.callbackUrl ?? "/api/github/oauth/callback"}</code>
+          </label>
+          <pre>{`GITHUB_OAUTH_CLIENT_ID=...
+GITHUB_OAUTH_CLIENT_SECRET=...`}</pre>
+          <div className="oauthSetupActions">
+            <a
+              href="https://github.com/settings/developers"
+              rel="noreferrer"
+              target="_blank"
             >
-              연결 해제
-            </button>
-          ) : (
-            <a className="primaryAction" href="/api/github/oauth/start">
-              GitHub로 로그인
+              GitHub OAuth App 만들기
             </a>
-          )}
-        </div>
-      </section>
+            <Link href="/compare?mode=demo">데모 먼저 보기</Link>
+          </div>
+          <p className="hintText">
+            설정 후 개발 서버를 재시작하세요. 당장 테스트하려면 `PAT로 직접 연결`
+            탭을 사용하면 됩니다.
+          </p>
+        </section>
+      ) : null}
 
       {recentSessions.length > 0 ? (
         <section className="recentSessionsCard">
@@ -702,16 +828,6 @@ export function PatConnectionForm() {
           </div>
         </section>
       ) : null}
-
-      <label className="formField">
-        <span>Fine-grained PAT</span>
-        <input
-          placeholder="github_pat_..."
-          type="password"
-          value={token}
-          onChange={(event) => setToken(event.target.value)}
-        />
-      </label>
 
       <div className="actionsRow">
         <button
