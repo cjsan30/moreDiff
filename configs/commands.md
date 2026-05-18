@@ -1,5 +1,26 @@
 # Harness Commands
 
+## Product Commands
+
+- install dependencies
+  - `npm ci`
+- development server
+  - `npm run dev`
+- typecheck
+  - `npx tsc --noEmit`
+- unit test
+  - `npm test`
+- integration test
+  - `npm run test:integration`
+- smoke test
+  - `npm run test:smoke`
+- production build
+  - `npm run build`
+- production server
+  - `npm start`
+
+See `docs/RUNNING.md` for PowerShell and WSL execution examples.
+
 ## Standard Commands
 
 - build
